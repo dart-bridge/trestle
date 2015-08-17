@@ -26,27 +26,39 @@ part 'src/sql_standards.dart';
 QueryBuilder builder = new QueryBuilder();
 
 main() {
-  test('example query', () {
-    var selection = builder
+  test('PostgreSQL Dialect', () {
+    testQueryParser(new PostgreSqlQueryParser(), builder
 
     .select(from: 'users')
     .where((user) => user.firstName == 'Emil' && (user.age > 20 || user.isAdmin))
     .distinct()
-    .limit(3);
+    .limit(3),
 
-    var parser = new PostgreSqlQueryParser();
+    'SELECT * FROM "users"\n'
+    'WHERE "first_name" = \'Emil\' AND ("age" > 20 OR "is_admin")\n'
+    'DISTINCT\n'
+    'LIMIT 3'
 
-    print(parser.parse(builder
-    .select(from: 'users', fields: ['first_name', 'age'])
-    .where((user) => user.firstName == 'Emil' && (user.age > 20 || user.isAdmin))
-    .limit(50)));
-
-    expect(parser.parse(selection),
-    equals(
-        'SELECT * FROM "users"\n'
-        'WHERE "first_name" = \'Emil\' AND ("age" > 20 OR "is_admin")\n'
-        'DISTINCT\n'
-        'LIMIT 3'
-    ));
+    );
   });
+
+  test('MySQL Dialect', () {
+    testQueryParser(new MySqlQueryParser(), builder
+
+    .select(fields: ['first_name', 'age'], from: 'users')
+    .where((user) => user.firstName == 'Emil' && (user.age > 20 || user.isAdmin))
+    .distinct()
+    .limit(3),
+
+    'SELECT `first_name`, `age` FROM `users`\n'
+    'WHERE `first_name` = \'Emil\' AND (`age` > 20 OR `is_admin`)\n'
+    'DISTINCT\n'
+    'LIMIT 3'
+
+    );
+  });
+}
+
+testQueryParser(QueryParser parser, Query query, String expectedOutput) {
+  expect(parser.parse(query), equals(expectedOutput));
 }
