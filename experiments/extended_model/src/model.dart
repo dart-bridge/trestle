@@ -12,8 +12,12 @@ class Model<M> extends Object {
   }
 
   Iterable<String> $fields() sync* {
-    for (var member in _mirror.type.instanceMembers.keys)
-      yield MirrorSystem.getName(member);
+    yield 'id';
+    for (var member in _mirror.type.instanceMembers.values)
+      if (member.isGetter
+      && member.owner != reflectClass(Object)
+      && _mirror.type.instanceMembers.keys.contains(new Symbol('${MirrorSystem.getName(member.simpleName)}=')))
+        yield MirrorSystem.getName(member.simpleName);
   }
 
   noSuchMethod(Invocation invocation) => _mirror.delegate(invocation);

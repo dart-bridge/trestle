@@ -17,9 +17,9 @@ main() {
 
   // C – create new user and save
   final user1 = new User()
-    ..firstName = 'Emil'
-    ..lastName = 'Persson'
-    ..age = 20;
+    ..firstName = 'John'
+    ..lastName = 'Doe'
+    ..age = 100;
   collection.save(user1);
   print(user1);
 
@@ -28,7 +28,7 @@ main() {
   print(user2);
 
   // U – update the model
-  user2.firstName = 'Johan';
+  user2.firstName = 'Jane';
   collection.save(user2);
   print(user2);
 
@@ -44,8 +44,9 @@ class User {
   String firstName;
   String lastName;
   int age;
+  String get fullName => '$firstName $lastName';
 
   toString() {
-    return 'My name is $firstName $lastName and I\'m $age years old!';
+    return 'My name is $fullName and I\'m $age years old!';
   }
 }
