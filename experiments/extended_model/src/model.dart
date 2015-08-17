@@ -11,6 +11,11 @@ class Model<M> extends Object {
     _mirror = reflect(_model);
   }
 
+  Iterable<String> $fields() sync* {
+    for (var member in _mirror.type.instanceMembers.keys)
+      yield MirrorSystem.getName(member);
+  }
+
   noSuchMethod(Invocation invocation) => _mirror.delegate(invocation);
 
   @override

@@ -35,7 +35,7 @@ main() {
   final user3 = collection.find(1);
   print(user3);
   print(user3 == user2);
-  print((user3 as Model<User>).id);
+  print((user3 as Model<User>).$fields());
 
   print(collection.all());
 }
