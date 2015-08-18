@@ -5,4 +5,4 @@
 /// This library should only be concerned with the data
 /// mapping, and should depend on the gateway library
 /// for retrieving the data to work with.
-library trestle.orm.dart;
+library trestle.orm;
