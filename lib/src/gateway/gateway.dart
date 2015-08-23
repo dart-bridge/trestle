@@ -6,3 +6,25 @@
 /// with SQL. It only provides a fluent query builder and
 /// creates database agnostic query objects.
 library trestle.gateway;
+
+import 'dart:async';
+
+import 'constraints/constraints.dart';
+
+part 'driver.dart';
+part 'query.dart';
+part 'constraints.dart';
+part 'aggregates.dart';
+part 'create_actions.dart';
+part 'read_actions.dart';
+part 'update_actions.dart';
+part 'delete_actions.dart';
+
+class Gateway {
+  final Driver _driver;
+
+  Gateway(Driver this._driver);
+
+  Query table(String name) => new Query(_driver, name);
+}
+
