@@ -8,6 +8,8 @@
 library trestle.gateway;
 
 import 'dart:async';
+import 'dart:mirrors';
+import 'dart:math' show min;
 
 import 'constraints/constraints.dart';
 
@@ -19,6 +21,7 @@ part 'create_actions.dart';
 part 'read_actions.dart';
 part 'update_actions.dart';
 part 'delete_actions.dart';
+part 'predicate_parser.dart';
 
 class Gateway {
   final Driver _driver;
