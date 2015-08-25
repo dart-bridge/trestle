@@ -5,7 +5,7 @@ main() {
   group('invalid predicates', () {
     void invalidPredicate(Function predicate) {
       expect(
-          () => PredicateParser.parse(predicate),
+              () => PredicateParser.parse(predicate),
           throwsA(new isInstanceOf<PredicateParserException>()));
     }
 
@@ -22,8 +22,10 @@ main() {
   });
 
   group('single argument', () {
-    void assertParsesTo(Function predicate, String expression) {
-      expect(PredicateParser.parse(predicate).expression(['x']), equals(expression));
+    void assertParsesTo(Function predicate, String expression, [List variables = const []]) {
+      final exp = PredicateParser.parse(predicate);
+      expect(exp.expression(['x']), equals(expression));
+      expect(exp.variables, equals(variables));
     }
 
     test('simple expression', () {
@@ -33,7 +35,28 @@ main() {
     test('with variables', () {
       final i = 1;
       final s = "string";
-      assertParsesTo((a) => a.f == i && a.f2 == s, 'x.f == 1 && x.fs == "string"');
+      assertParsesTo((a) => a.f == s, 'x.f == ?', ['string']);
+      assertParsesTo((a) => a.f == i && a.f2 == s, 'x.f == 1 && x.f2 == ?', ['string']);
+      assertParsesTo((a) => a.f == 1 && a.f2 == s, 'x.f == 1 && x.f2 == ?', ['string']);
+      assertParsesTo((a) => a.f == i + 3 && a.f2 == s, 'x.f == 4 && x.f2 == ?', ['string']);
+    });
+
+    test('with expressions', () {
+      assertParsesTo(
+              (a) => a.f == new DateTime.utc(2015, 01, 01),
+          'x.f == date(2015-01-01T00:00:00.000Z)');
+    });
+  });
+
+  group('multiple arguments', () {
+    void assertParsesTo(Function predicate, String expression) {
+      expect(PredicateParser.parse(predicate).expression(['x', 'y']), equals(expression));
+    }
+
+    test('integration', () {
+      final age = 20;
+      assertParsesTo((user, address) => user.age > age && user.addressId == address.id,
+      'x.age > 20 && x.addressId == y.id');
     });
   });
 }

@@ -9,7 +9,6 @@ library trestle.gateway;
 
 import 'dart:async';
 import 'dart:mirrors';
-import 'dart:math' show min;
 
 import 'constraints/constraints.dart';
 
@@ -27,6 +26,10 @@ class Gateway {
   final Driver _driver;
 
   Gateway(Driver this._driver);
+
+  Future connect() => _driver.connect();
+
+  Future disconnect() => _driver.disconnect();
 
   Query table(String name) => new Query(_driver, name);
 }

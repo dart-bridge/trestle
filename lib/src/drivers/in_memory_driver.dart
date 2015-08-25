@@ -175,6 +175,12 @@ class InMemoryDriver implements Driver {
       filteredRow[field] = row[field];
     return filteredRow;
   }
+
+  Future connect() async {
+  }
+
+  Future disconnect() async {
+  }
 }
 
 class _AccessibleMap {

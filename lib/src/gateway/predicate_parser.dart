@@ -1,17 +1,20 @@
 part of trestle.gateway;
 
 class PredicateExpression {
-  final Iterable<String> _arguments;
+  final List<String> _arguments;
   final String _expression;
+  final List _variables;
 
   int get argumentsCount => _arguments.length;
 
-  const PredicateExpression(Iterable<String> this._arguments, String this._expression);
+  const PredicateExpression(List this._variables, List<String> this._arguments, String this._expression);
 
-  String expression(Iterable<String> arguments) {
+  Iterable get variables => _variables;
+
+  String expression(List<String> arguments) {
     var e = _expression;
     for (var i = 0;i < argumentsCount;i++)
-      e = e.replaceAll(_arguments[i], arguments[i]);
+      e = e.replaceAll('${_arguments[i]}.', '${arguments[i]}.');
     return e;
   }
 }
@@ -21,6 +24,7 @@ class PredicateParser {
   final Function _predicate;
   Iterable<String> _arguments;
   String _expression;
+  final List _variables = [];
 
   PredicateParser(Function predicate) :
   _predicate = predicate,
@@ -40,49 +44,84 @@ class PredicateParser {
     final match = new RegExp(r'\((.+?)\)\s*=>\s*(.*)').firstMatch(_source);
     _arguments = match[1].split(new RegExp(r'\s*,\s*'));
     _expression = match[2];
-    final values = _getVariableValues();
-    _replaceVariablesWithValues(values);
-    return new PredicateExpression(_arguments, _expression);
+    _resolveVariables();
+    return new PredicateExpression(_variables, _arguments, _expression);
   }
 
-  Iterable _getVariableValues() {
-    return [1];
-  }
-
-  void _replaceVariablesWithValues(List values) {
-    var traversableExpression = _expression;
-    var position = 0;
-    final tokens = <String, RegExp>{
-      'whitespace': new RegExp(r'^\s+'),
-      'string': new RegExp(r'''^(['"])(?!\1)*.\1'''),
-      'knownArgument': new RegExp('^(?:${_arguments.join('|')})[.a-zA-Z]*'),
-      'punctuation': new RegExp('^[=<>|&()]'),
-      'number': new RegExp(r'^\d[\d.]*'),
-      'variable': new RegExp(r'^[a-z]\w*'),
-    };
-    while (traversableExpression.length > 0) {
-      final positionBeforeLoop = position;
-      for (var token in tokens.keys) {
-        if (tokens[token].hasMatch(traversableExpression)) {
-          var length = tokens[token].firstMatch(traversableExpression).end;
-          traversableExpression = traversableExpression.substring(length);
-          if (token == 'variable') {
-            final Object val = values.removeLast();
-            _expression = _expression.substring(0, position) + val.toString() + traversableExpression;
-            length += '$val'.length;
-          }
-          position += length;
-          break;
+  void _resolveVariables() {
+    final rows = _arguments.map((row) => new _PredicateRowMock(row)).toList();
+    _mirror.apply(rows);
+    for (_PredicateRowMock row in rows) {
+      for (var field in row.fields.values) {
+        for (var operation in field.operations) {
+          print('${row.name}.${field.name} ${operation[0]} ${operation[1]}');
+          final regExp = '${row.name}.${field.name}'r'\s*'
+          '${operation[0]}'r'.*?(?=[&|=<>]|$)';
+          final value = operation[1];
+          if (value is _PredicateFieldMock)
+            continue;
+          final replaceWith = '${row.name}.${field.name} ${operation[0]} ${_formatInjectedValue(value)} ';
+          _expression = _expression.replaceFirst(new RegExp(regExp), replaceWith).trim();
         }
       }
-      if (position == positionBeforeLoop)
-        throw new PredicateParserException('Invalid predicate syntax at "${traversableExpression.substring(0, min(10, traversableExpression.length))}..."');
     }
+  }
+
+  String _formatInjectedValue(Object value) {
+    if (value is String) {
+      _variables.add(value);
+      return '?';
+    }
+    if (value is DateTime)
+      return 'date(${value.toIso8601String()})';
+    return '$value';
   }
 
   String get _source {
     return _mirror.function.source;
   }
+}
+
+class _PredicateRowMock {
+  final String name;
+  final Map<Symbol, _PredicateFieldMock> fields = {};
+
+  _PredicateRowMock(String this.name);
+
+  noSuchMethod(Invocation invocation) {
+    if (invocation.isGetter) {
+      if (!fields.containsKey(invocation.memberName))
+        fields[invocation.memberName] = (new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName)));
+      return fields[invocation.memberName];
+    }
+    return super.noSuchMethod(invocation);
+  }
+
+  toString() => '$name: [${fields.values.join(', ')}]';
+}
+
+class _PredicateFieldMock {
+  final String name;
+  final List<List> operations = [];
+
+  _PredicateFieldMock(String this.name);
+
+  operator ==(v) => _registerComparison('==', v);
+
+  operator >=(v) => _registerComparison('>=', v);
+
+  operator <=(v) => _registerComparison('<=', v);
+
+  operator >(v) => _registerComparison('>', v);
+
+  operator <(v) => _registerComparison('<', v);
+
+  _registerComparison(String operator, value) {
+    operations.add([operator, value]);
+    return false;
+  }
+
+  toString() => '$name: [${operations.join(', ')}]';
 }
 
 class PredicateParserException implements Exception {

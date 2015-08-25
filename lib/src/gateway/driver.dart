@@ -1,6 +1,10 @@
 part of trestle.gateway;
 
 abstract class Driver {
+  Future connect();
+
+  Future disconnect();
+
   Future<int> count(Query query);
 
   Future<double> average(Query query, String field);

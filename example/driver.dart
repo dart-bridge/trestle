@@ -84,4 +84,10 @@ class LoggingDriver implements Driver {
     print('Updating the rows in ${_formatQuery(query)}, updating the fields '
     '${fields.keys} with the values ${fields.values}');
   }
+
+  Future connect() async {
+  }
+
+  Future disconnect() async {
+  }
 }
