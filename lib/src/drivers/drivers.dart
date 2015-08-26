@@ -14,7 +14,7 @@ import 'dart:mirrors';
 import 'package:trestle/src/gateway/constraints/constraints.dart';
 import 'package:trestle/src/gateway/gateway.dart';
 import 'package:sqljocky/sqljocky.dart' as sqljocky;
-import 'dart:collection';
+import 'package:postgresql/postgresql.dart' as postgresql;
 
 part 'in_memory_driver.dart';
 part 'sql_driver.dart';

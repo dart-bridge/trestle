@@ -1,15 +1,30 @@
 part of trestle.drivers;
 
 class PostgresqlDriver extends SqlDriver with SqlStandards {
-  Future connect() {
-    return null;
+  postgresql.Connection _connection;
+  final String _uri;
+
+  PostgresqlDriver({String username: 'root',
+                   String password:'password',
+                   String host: 'localhost',
+                   int port: 5432,
+                   String database: 'database',
+                   bool ssl: false}) :
+  _uri = 'postgres://$username:$password@$host:$port/$database${ssl ? '?sslmode=require' : ''}';
+
+  Future connect() async {
+    _connection = await postgresql.connect(_uri);
   }
 
-  Future disconnect() {
-    return null;
+  Future disconnect() async {
+    _connection.close();
   }
 
-  Stream execute(String query, List variables) {
-    return null;
+  Stream<Map<String, dynamic>> execute(String query, List variables) {
+    return _connection.query(query, variables).map(_rowToMap);
+  }
+
+  Map<String, dynamic> _rowToMap(postgresql.Row row) {
+    return row.toMap();
   }
 }

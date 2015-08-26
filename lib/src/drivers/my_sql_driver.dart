@@ -13,31 +13,12 @@ class MySqlDriver extends SqlDriver {
   }
 
   Stream<Map<String, dynamic>> execute(String query, List variables) async* {
-    sqljocky.Results results = await _connection.query(query);
-
-    yield* results.map(_rowToMap);
-  }
-
-  Map<String, dynamic> _rowToMap(sqljocky.Row row) {
-    return new _JockyRowMap(row);
+    sqljocky.Results results = await (await _connection.prepare(query)).execute(variables);
+    Iterable<String> fieldNames = results.fields.map((f) => f.name);
+    yield* results.map((row) => new Map.fromIterables(fieldNames, row));
   }
 
   String wrapSystemIdentifier(String systemId) {
     return '`$systemId`';
   }
-}
-
-class _JockyRowMap extends UnmodifiableMapBase<String, dynamic> implements Map<String, dynamic> {
-  final InstanceMirror _mirror;
-  final sqljocky.Row _row;
-
-  _JockyRowMap(sqljocky.Row row) :
-  _row = row,
-  _mirror = reflect(row);
-
-  operator [](String key) {
-    return _mirror.getField(new Symbol(key)).reflectee;
-  }
-
-  Iterable<String> get keys => new Map.fromIterable(_row).keys;
 }

@@ -25,6 +25,7 @@ class PredicateParser {
   Iterable<String> _arguments;
   String _expression;
   final List _variables = [];
+  final Queue<bool> _comparisonResponses = new Queue();
 
   PredicateParser(Function predicate) :
   _predicate = predicate,
@@ -44,24 +45,33 @@ class PredicateParser {
     final match = new RegExp(r'\((.+?)\)\s*=>\s*(.*)').firstMatch(_source);
     _arguments = match[1].split(new RegExp(r'\s*,\s*'));
     _expression = match[2];
+    _collectComparisonResponses();
     _resolveVariables();
     return new PredicateExpression(_variables, _arguments, _expression);
   }
 
+  void _collectComparisonResponses() {
+    _comparisonResponses.addAll(new RegExp(r'(&&|\|\|)').allMatches(_source).map((m) {
+      return m[1] == '&&';
+    }));
+  }
+
   void _resolveVariables() {
-    final rows = _arguments.map((row) => new _PredicateRowMock(row)).toList();
+    final rows = _arguments.map((row) => new _PredicateRowMock(row, _comparisonResponses)).toList();
     _mirror.apply(rows);
     for (_PredicateRowMock row in rows) {
       for (var field in row.fields.values) {
         for (var operation in field.operations) {
-          print('${row.name}.${field.name} ${operation[0]} ${operation[1]}');
           final regExp = '${row.name}.${field.name}'r'\s*'
-          '${operation[0]}'r'.*?(?=[&|=<>]|$)';
+          '${operation[0]}'r'(?:\(.*\)|.)*?(?=[&|=<>)]|$)';
           final value = operation[1];
           if (value is _PredicateFieldMock)
             continue;
           final replaceWith = '${row.name}.${field.name} ${operation[0]} ${_formatInjectedValue(value)} ';
-          _expression = _expression.replaceFirst(new RegExp(regExp), replaceWith).trim();
+          _expression = _expression
+          .replaceFirst(new RegExp(regExp), replaceWith)
+          .replaceAll(' )', ')')
+          .trim();
         }
       }
     }
@@ -85,13 +95,15 @@ class PredicateParser {
 class _PredicateRowMock {
   final String name;
   final Map<Symbol, _PredicateFieldMock> fields = {};
+  final Queue<bool> comparisonResponses;
 
-  _PredicateRowMock(String this.name);
+  _PredicateRowMock(String this.name, Queue<bool> this.comparisonResponses);
 
   noSuchMethod(Invocation invocation) {
     if (invocation.isGetter) {
       if (!fields.containsKey(invocation.memberName))
-        fields[invocation.memberName] = (new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName)));
+        fields[invocation.memberName] = (
+            new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName), comparisonResponses));
       return fields[invocation.memberName];
     }
     return super.noSuchMethod(invocation);
@@ -103,8 +115,9 @@ class _PredicateRowMock {
 class _PredicateFieldMock {
   final String name;
   final List<List> operations = [];
+  final Queue<bool> comparisonResponses;
 
-  _PredicateFieldMock(String this.name);
+  _PredicateFieldMock(String this.name, Queue<bool> this.comparisonResponses);
 
   operator ==(v) => _registerComparison('==', v);
 
@@ -118,7 +131,13 @@ class _PredicateFieldMock {
 
   _registerComparison(String operator, value) {
     operations.add([operator, value]);
-    return false;
+    return _getResponse();
+  }
+
+  bool _getResponse() {
+    if (comparisonResponses.length == 0)
+      return true;
+    return comparisonResponses.removeFirst();
   }
 
   toString() => '$name: [${operations.join(', ')}]';

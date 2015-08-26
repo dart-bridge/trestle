@@ -9,6 +9,7 @@ library trestle.gateway;
 
 import 'dart:async';
 import 'dart:mirrors';
+import 'dart:collection';
 
 import 'constraints/constraints.dart';
 

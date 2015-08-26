@@ -85,9 +85,45 @@ class _ConstraintParser {
                     List this._variables);
 
   String call() {
-    if (_constraint is WhereConstraint)
-      return _whereConstraint();
+    if (_constraint is WhereConstraint) return _whereConstraint();
+    if (_constraint is LimitConstraint) return _limitConstraint();
+    if (_constraint is OffsetConstraint) return _offsetConstraint();
+    if (_constraint is DistinctConstraint) return _distinctConstraint();
+    if (_constraint is JoinConstraint) return _joinConstraint();
     return '';
+  }
+
+  String _joinConstraint() {
+    return 'JOIN "${(_constraint as JoinConstraint).foreign.table}" '
+    'ON ${_parseJoinPredicate((_constraint as JoinConstraint).predicate)}';
+  }
+
+  String _parsePredicate(Function predicate, Iterable params, [String treat(String exp)]) {
+    final predicateExpression = PredicateParser.parse(predicate);
+    final expression = predicateExpression.expression(params);
+    _variables.addAll(predicateExpression.variables);
+
+    return (treat == null ? (s) => s : treat)(expression
+    .replaceAllMapped(new RegExp(r'"(.*?)"'), ($) => "'${$[1]}'")
+    .replaceAll('==', '=')
+    .replaceAll('&&', 'AND')
+    .replaceAll('||', 'OR'));
+  }
+
+  String _parseJoinPredicate(JoinPredicate predicate) {
+    return _parsePredicate(predicate, [_query.table, (_constraint as JoinConstraint).foreign.table]);
+  }
+
+  String _distinctConstraint() {
+    return 'DISTINCT';
+  }
+
+  String _limitConstraint() {
+    return 'LIMIT ${(_constraint as LimitConstraint).count}';
+  }
+
+  String _offsetConstraint() {
+    return 'OFFSET ${(_constraint as OffsetConstraint).count}';
   }
 
   String _whereConstraint() {
@@ -95,17 +131,9 @@ class _ConstraintParser {
   }
 
   String _parseWherePredicate(WherePredicate predicate) {
-    final predicateExpression = PredicateParser.parse(predicate);
-    final expression = predicateExpression.expression([_query.table]);
-    _variables.addAll(predicateExpression.variables);
-
-    return expression
-    .replaceAllMapped(new RegExp(r'"(.*?)"'), ($) => "'${$[1]}'")
+    return _parsePredicate(predicate, [_query.table], (String s) => s
     .replaceAllMapped(new RegExp('${_query.table}'r'\.(\w+)'), ($) {
       return _driver.wrapSystemIdentifier($[1]);
-    })
-    .replaceAll('==', '=')
-    .replaceAll('&&', 'AND')
-    .replaceAll('||', 'OR');
+    }));
   }
 }

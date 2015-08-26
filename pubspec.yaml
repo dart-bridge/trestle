@@ -7,5 +7,6 @@ environment:
 description: Database gateway and ORM
 dependencies:
   sqljocky: '^0.13.0'
+  postgresql: '^0.3.0'
 dev_dependencies:
   test: any

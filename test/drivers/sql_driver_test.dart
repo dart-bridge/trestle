@@ -55,8 +55,28 @@ main() {
               (r) => r.x > 20 && (r.y >= 10 || r.z <= "string value")
       ).get());
       expectQuery('SELECT * FROM "test" WHERE '
-      '"x" > 20 AND ("10" >= ? OR "z" <= ?)'
+      '"x" > 20 AND ("y" >= 10 OR "z" <= ?)'
       ';', ['string value']);
+    });
+
+    test('limit', () async {
+      await query((q) => q.limit(10).get());
+      expectQuery('SELECT * FROM "test" LIMIT 10;');
+    });
+
+    test('distinct', () async {
+      await query((q) => q.distinct().get());
+      expectQuery('SELECT * FROM "test" DISTINCT;');
+    });
+
+    test('offset', () async {
+      await query((q) => q.offset(10).get());
+      expectQuery('SELECT * FROM "test" OFFSET 10;');
+    });
+
+    test('join', () async {
+      await query((q) => q.join('other', (a,b) => a.x == b.y).get());
+      expectQuery('SELECT * FROM "test" JOIN "other" ON test.x = other.y;');
     });
   });
 }
