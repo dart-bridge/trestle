@@ -15,7 +15,7 @@ main() {
     var returnValue = predicate(gateway.table('test'));
     if (returnValue is Stream)
       return returnValue.toList();
-    await returnValue;
+    return returnValue;
   }
 
   expectQuery(String query, [List variables = const []]) {
@@ -78,12 +78,51 @@ main() {
       await query((q) => q.join('other', (a,b) => a.x == b.y).get());
       expectQuery('SELECT * FROM "test" JOIN "other" ON test.x = other.y;');
     });
+
+    test('sort by', () async {
+      await query((q) => q.sortBy('x', 'desc').get());
+      expectQuery('SELECT * FROM "test" SORT BY "x" DESC;');
+    });
+
+    test('group by', () async {
+      await query((q) => q.groupBy('x').get());
+      expectQuery('SELECT * FROM "test" GROUP BY "x";');
+    });
+
+    test('integration', () async {
+      await gateway.table('users')
+      .where((user) => user.age > 20 && user.first_name == 'John')
+      .sortBy('first_name')
+      .limit(1)
+      .join('addresses', (user, address) => user.address_id == address.id)
+      .get(['address','first_name','last_name']).toList();
+
+      expectQuery(
+          'SELECT "address", "first_name", "last_name" FROM "users" '
+          'WHERE "age" > 20 AND "first_name" = ? '
+          'SORT BY "first_name" ASC '
+          'LIMIT 1 '
+          'JOIN "addresses" ON users.address_id = addresses.id;',
+          ['John']
+      );
+    });
+  });
+
+  group('aggregates', () {
+    test('count', () async {
+      driver.willReturn = [{'count': 123}];
+      int length = await query((q) => q.count());
+
+      expect(length, equals(123));
+      expectQuery('SELECT COUNT(*) AS count FROM "test";');
+    });
   });
 }
 
 class MockSqlDriver extends SqlDriver with SqlStandards {
   final List<String> queries = [];
   final List<List> variableSets = [];
+  var willReturn = [];
 
   Future connect() async {}
 
@@ -92,6 +131,6 @@ class MockSqlDriver extends SqlDriver with SqlStandards {
   Stream<Map<String, dynamic>> execute(String query, List variables) {
     queries.add(query);
     variableSets.add(variables);
-    return new Stream.empty();
+    return new Stream.fromIterable(willReturn);
   }
 }

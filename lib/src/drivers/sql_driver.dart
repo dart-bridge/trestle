@@ -6,7 +6,13 @@ abstract class SqlDriver implements Driver {
   String wrapSystemIdentifier(String systemId);
 
   Future<int> count(Query query) {
-    return null;
+    final List<String> queryParts = [];
+    final List variables = [];
+
+    queryParts.add('SELECT COUNT(*) AS count FROM ${wrapSystemIdentifier(query.table)}');
+    queryParts.addAll(_parseQuery(query, variables));
+
+    return execute('${queryParts.join(' ')};', variables).first.then((r) => r['count']);
   }
 
   Future<double> average(Query query, String field) {
@@ -90,11 +96,22 @@ class _ConstraintParser {
     if (_constraint is OffsetConstraint) return _offsetConstraint();
     if (_constraint is DistinctConstraint) return _distinctConstraint();
     if (_constraint is JoinConstraint) return _joinConstraint();
+    if (_constraint is GroupByConstraint) return _groupByConstraint();
+    if (_constraint is SortByConstraint) return _sortByConstraint();
     return '';
   }
 
+  String _sortByConstraint() {
+    return 'SORT BY ${_driver.wrapSystemIdentifier((_constraint as SortByConstraint).field)} '
+    '${(_constraint as SortByConstraint).direction == SortByConstraint.descending ? 'DESC' : 'ASC'}';
+  }
+
+  String _groupByConstraint() {
+    return 'GROUP BY ${_driver.wrapSystemIdentifier((_constraint as GroupByConstraint).field)}';
+  }
+
   String _joinConstraint() {
-    return 'JOIN "${(_constraint as JoinConstraint).foreign.table}" '
+    return 'JOIN ${_driver.wrapSystemIdentifier((_constraint as JoinConstraint).foreign.table)} '
     'ON ${_parseJoinPredicate((_constraint as JoinConstraint).predicate)}';
   }
 
