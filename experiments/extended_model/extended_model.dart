@@ -38,6 +38,11 @@ main() {
   print((user3 as Model<User>).$fields());
 
   print(collection.all());
+
+  // D – delete the model
+  collection.delete(user3);
+
+  print(collection.all());
 }
 
 class User {

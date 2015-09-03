@@ -22,5 +22,10 @@ class Collection<M> {
     _collection.add(new Model<M>(_collection.length + 1, model));
   }
 
-  Iterable<M> all() => _collection;
+  Iterable<M> all() => (_collection as Iterable<M>);
+
+  void delete(Model<M> model) {
+    if (model is! Model) return;
+    _collection.remove(model);
+  }
 }
