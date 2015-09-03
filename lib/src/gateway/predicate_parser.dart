@@ -7,13 +7,14 @@ class PredicateExpression {
 
   int get argumentsCount => _arguments.length;
 
-  const PredicateExpression(List this._variables, List<String> this._arguments, String this._expression);
+  const PredicateExpression(List this._variables, List<String> this._arguments,
+      String this._expression);
 
   Iterable get variables => _variables;
 
   String expression(List<String> arguments) {
     var e = _expression;
-    for (var i = 0;i < argumentsCount;i++)
+    for (var i = 0; i < argumentsCount; i++)
       e = e.replaceAll('${_arguments[i]}.', '${arguments[i]}.');
     return e;
   }
@@ -27,9 +28,10 @@ class PredicateParser {
   final List _variables = [];
   final Queue<bool> _comparisonResponses = new Queue();
 
-  PredicateParser(Function predicate) :
-  _predicate = predicate,
-  _mirror = reflect(predicate);
+  PredicateParser(Function predicate)
+      :
+        _predicate = predicate,
+        _mirror = reflect(predicate);
 
   static PredicateExpression parse(Function predicate) {
     try {
@@ -51,30 +53,34 @@ class PredicateParser {
   }
 
   void _collectComparisonResponses() {
-    _comparisonResponses.addAll(new RegExp(r'(&&|\|\|)').allMatches(_source).map((m) {
-      return m[1] == '&&';
-    }));
+    _comparisonResponses.addAll(
+        new RegExp(r'(&&|\|\|)').allMatches(_source).map((m) {
+          return m[1] == '&&';
+        }));
   }
 
   void _resolveVariables() {
-    final rows = _arguments.map((row) => new _PredicateRowMock(row, _comparisonResponses)).toList();
+    final rows = _arguments.map((row) => new _PredicateRowMock(
+        row, _comparisonResponses)).toList();
     _mirror.apply(rows);
     for (_PredicateRowMock row in rows) {
-      for (var field in row.fields.values) {
+      for (var field in row._fields.values) {
         for (var operation in field.operations) {
-          final regExp = '${row.name}.${field.name}'r'\s*'
+          final regExp = '${row._name}.${field.name}'r'\s*'
           '${operation[0]}'r'(?:\(.*\)|.)*?(?=[&|=<>)]|$)';
           final value = operation[1];
           if (value is _PredicateFieldMock)
             continue;
-          final replaceWith = '${row.name}.${field.name} ${operation[0]} ${_formatInjectedValue(value)} ';
+          final replaceWith = '${row._name}.${field
+              .name} %PARSED_OPERATION%${operation[0]} ${_formatInjectedValue(value)} ';
           _expression = _expression
-          .replaceFirst(new RegExp(regExp), replaceWith)
-          .replaceAll(' )', ')')
-          .trim();
+              .replaceFirst(new RegExp(regExp), replaceWith)
+              .replaceAll(' )', ')')
+              .trim();
         }
       }
     }
+    _expression = _expression.replaceAll('%PARSED_OPERATION%', '');
   }
 
   String _formatInjectedValue(Object value) {
@@ -88,28 +94,31 @@ class PredicateParser {
   }
 
   String get _source {
-    return _mirror.function.source;
+    return __source ?? (__source = _mirror.function.source);
   }
+
+  String __source;
 }
 
 class _PredicateRowMock {
-  final String name;
-  final Map<Symbol, _PredicateFieldMock> fields = {};
-  final Queue<bool> comparisonResponses;
+  final String _name;
+  final Map<Symbol, _PredicateFieldMock> _fields = {};
+  final Queue<bool> _comparisonResponses;
 
-  _PredicateRowMock(String this.name, Queue<bool> this.comparisonResponses);
+  _PredicateRowMock(String this._name, Queue<bool> this._comparisonResponses);
 
   noSuchMethod(Invocation invocation) {
     if (invocation.isGetter) {
-      if (!fields.containsKey(invocation.memberName))
-        fields[invocation.memberName] = (
-            new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName), comparisonResponses));
-      return fields[invocation.memberName];
+      if (!_fields.containsKey(invocation.memberName))
+        _fields[invocation.memberName] = (
+            new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName),
+                _comparisonResponses));
+      return _fields[invocation.memberName];
     }
     return super.noSuchMethod(invocation);
   }
 
-  toString() => '$name: [${fields.values.join(', ')}]';
+  toString() => '$_name: [${_fields.values.join(', ')}]';
 }
 
 class _PredicateFieldMock {
