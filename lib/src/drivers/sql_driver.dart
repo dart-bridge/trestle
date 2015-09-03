@@ -5,42 +5,68 @@ abstract class SqlDriver implements Driver {
 
   String wrapSystemIdentifier(String systemId);
 
-  Future<int> count(Query query) {
+  Future _aggregate(String aggregate,
+                    String fieldSelector,
+                    String alias,
+                    Query query) {
     final List<String> queryParts = [];
     final List variables = [];
 
-    queryParts.add('SELECT COUNT(*) AS count FROM ${wrapSystemIdentifier(query.table)}');
+    queryParts.add('SELECT $aggregate($fieldSelector) AS $alias FROM ${wrapSystemIdentifier(query.table)}');
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).first.then((r) => r['count']);
+    return execute('${queryParts.join(' ')};', variables).first.then((r) => r[alias]);
+  }
+
+  Future<int> count(Query query) {
+    return _aggregate('COUNT', '*', 'count', query);
   }
 
   Future<double> average(Query query, String field) {
-    return null;
+    return _aggregate('AVG', wrapSystemIdentifier(field), 'average', query);
   }
 
   Future<int> max(Query query, String field) {
-    return null;
+    return _aggregate('MAX', wrapSystemIdentifier(field), 'max', query);
   }
 
   Future<int> min(Query query, String field) {
-    return null;
+    return _aggregate('MIN', wrapSystemIdentifier(field), 'min', query);
   }
 
   Future<int> sum(Query query, String field) {
-    return null;
+    return _aggregate('SUM', wrapSystemIdentifier(field), 'sum', query);
+  }
+
+  String _addQuery(List variables, Query query, Map<String, dynamic> row) {
+    final header = 'INSERT INTO ${wrapSystemIdentifier(query.table)}';
+    final fields = row.keys.map(wrapSystemIdentifier);
+    final values = ('?' * row.length).split('');
+    variables.addAll(row.values);
+    return '$header (${fields.join(', ')}) VALUES (${values.join(', ')});';
   }
 
   Future add(Query query, Map<String, dynamic> row) {
-    return null;
+    final variables = [];
+    final singleQuery = _addQuery(variables, query, row);
+    return execute(singleQuery, variables).toList();
   }
 
   Future addAll(Query query, Iterable<Map<String, dynamic>> rows) {
-    return null;
+    final variables = [];
+    final multiQuery = rows.map((r) => _addQuery(variables, query, r)).join(' ');
+    return execute(multiQuery, variables).toList();
   }
 
   Future delete(Query query) {
-    return null;
+    final List<String> queryParts = [];
+    final List variables = [];
+
+    queryParts.add('DELETE FROM ${wrapSystemIdentifier(query.table)}');
+
+    queryParts.addAll(_parseQuery(query, variables));
+
+    return execute('${queryParts.join(' ')};', variables).toList();
   }
 
   Stream<Map<String, dynamic>> get(Query query, Iterable<String> fields) {
@@ -67,15 +93,43 @@ abstract class SqlDriver implements Driver {
   }
 
   Future update(Query query, Map<String, dynamic> fields) {
-    return null;
+    final List<String> queryParts = [];
+    final List variables = [];
+
+    queryParts.add('UPDATE ${wrapSystemIdentifier(query.table)} SET');
+
+    queryParts.add(fields.keys
+        .map((f) => '${wrapSystemIdentifier(f)} = ?')
+        .join(', '));
+
+    variables.addAll(fields.values);
+
+    queryParts.addAll(_parseQuery(query, variables));
+
+    return execute('${queryParts.join(' ')};', variables).toList();
   }
 
   Future increment(Query query, String field, int amount) {
-    return null;
+    return _inOrDecrement(query, field, amount, '+');
   }
 
   Future decrement(Query query, String field, int amount) {
-    return null;
+    return _inOrDecrement(query, field, amount, '-');
+  }
+
+  Future _inOrDecrement(Query query, String field, int amount, String operator) {
+    final List<String> queryParts = [];
+    final List variables = [];
+
+    queryParts.add('UPDATE ${wrapSystemIdentifier(query.table)} SET');
+
+    queryParts.add(
+        '${wrapSystemIdentifier(field)} '
+        '= ${wrapSystemIdentifier(field)} $operator $amount');
+
+    queryParts.addAll(_parseQuery(query, variables));
+
+    return execute('${queryParts.join(' ')};', variables).toList();
   }
 }
 

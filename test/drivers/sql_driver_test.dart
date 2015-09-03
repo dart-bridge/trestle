@@ -116,6 +116,81 @@ main() {
       expect(length, equals(123));
       expectQuery('SELECT COUNT(*) AS count FROM "test";');
     });
+
+    test('average', () async {
+      driver.willReturn = [{'average': 123.123}];
+      double average = await query((q) => q.average('field'));
+
+      expect(average, equals(123.123));
+      expectQuery('SELECT AVG("field") AS average FROM "test";');
+    });
+
+    test('max', () async {
+      driver.willReturn = [{'max': 123}];
+      int max = await query((q) => q.max('field'));
+
+      expect(max, equals(123));
+      expectQuery('SELECT MAX("field") AS max FROM "test";');
+    });
+
+    test('min', () async {
+      driver.willReturn = [{'min': 123}];
+      int min = await query((q) => q.min('field'));
+
+      expect(min, equals(123));
+      expectQuery('SELECT MIN("field") AS min FROM "test";');
+    });
+
+    test('sum', () async {
+      driver.willReturn = [{'sum': 123}];
+      int sum = await query((q) => q.sum('field'));
+
+      expect(sum, equals(123));
+      expectQuery('SELECT SUM("field") AS sum FROM "test";');
+    });
+  });
+
+  group('insert statements', () {
+    test('simple insert', () async {
+      await query((q) => q.add({'x': 'y'}));
+      expectQuery('INSERT INTO "test" ("x") VALUES (?);', ['y']);
+    });
+
+    test('add all', () async {
+      await query((q) => q.addAll([{'x': 'y'}, {'x': 'z'}]));
+      expectQuery('INSERT INTO "test" ("x") VALUES (?); INSERT INTO "test" ("x") VALUES (?);', ['y', 'z']);
+    });
+  });
+
+  group('delete statments', () {
+    test('truncate', () async {
+      await query((q) => q.delete());
+      expectQuery('DELETE FROM "test";');
+    });
+
+    test('with constraints', () async {
+      await query((q) => q.where((f) => f.x == f.y).limit(10).delete());
+      expectQuery('DELETE FROM "test" '
+          'WHERE "x" = "y" '
+          'LIMIT 10;');
+    });
+  });
+
+  test('update statements', () async {
+    await query((q) => q.where((f) => f.x == '1').update({'f': '2', 'f2': '3'}));
+    expectQuery('UPDATE "test" '
+        'SET "f" = ?, "f2" = ? '
+        'WHERE "x" = ?;', ['2', '3', '1']);
+  });
+
+  test('increments', () async {
+    await query((q) => q.limit(3).increment('f', 7));
+    expectQuery('UPDATE "test" SET "f" = "f" + 7 LIMIT 3;');
+  });
+
+  test('decrements', () async {
+    await query((q) => q.limit(3).decrement('f', 7));
+    expectQuery('UPDATE "test" SET "f" = "f" - 7 LIMIT 3;');
   });
 }
 
