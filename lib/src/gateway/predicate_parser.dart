@@ -66,7 +66,7 @@ class PredicateParser {
     for (_PredicateRowMock row in rows) {
       for (var field in row._fields.values) {
         for (var operation in field.operations) {
-          final regExp = '${row._name}.${field.name}'r'\s*'
+          final regExp = '${row._name}(?:\\.${field.name}|\\[.*?\\])'r'\s*'
           '${operation[0]}'r'(?:\(.*\)|.)*?(?=[&|=<>)]|$)';
           final value = operation[1];
           if (value is _PredicateFieldMock)

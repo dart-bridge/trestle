@@ -27,10 +27,11 @@ class Repository<M> {
   }
 
   String _inferTableName() {
-    return MirrorSystem.getName(_classMirror.simpleName)
+    return (MirrorSystem.getName(_classMirror.simpleName)
         .replaceAllMapped(
         new RegExp('[A-Z]'), (m) => '_' + m[0].toLowerCase())
-        .replaceFirst(new RegExp('^_'), '') + 's';
+        .replaceFirst(new RegExp('^_'), '') + 's')
+        .replaceFirst(new RegExp(r'ss$'), 'ses');
   }
 
   Future<M> find(int id) {
@@ -77,14 +78,38 @@ class Relationship<M> {
 
   Relationship(Repository<M> this._repo, Gateway this._gateway, M this.owner);
 
-  RepositoryQuery hasMany(Type type, [String foreignField]) {
-    final id = (owner as dynamic).id;
-    final idField = foreignField ??
-        _repo.table.replaceFirst(new RegExp(r's$'), '') + '_id';
-    final repo = new Repository._of(type);
-    repo.connect(_gateway);
+  Repository _repository(Type of, String table) {
+    return new Repository._of(of)
+      .._table ??= table
+      ..connect(_gateway);
+  }
 
-    return repo.where((foreign) => foreign[idField] == id);
+  String _foreignId(Object reference) {
+    if (reference is Type)
+      return reference.toString()
+          .replaceAll(new RegExp(r'(?=[A-Z])'), '_')
+          .toLowerCase()
+          .replaceFirst(new RegExp('^_'), '') + '_id';
+    return reference.toString().replaceFirst(new RegExp(r'e?s$'), '') + '_id';
+  }
+
+  RepositoryQuery hasMany(Type type, {String field, String table}) {
+    final id = (owner as dynamic).id;
+    final foreignIdField = field ?? _foreignId(_repo.table);
+
+    return _repository(type, table)
+        .where((foreign) => foreign[foreignIdField] == id);
+  }
+
+  Future belongsTo(Type type, {String field, String table}) {
+    final idField = new Symbol(field ?? _foreignId(type));
+    final id = reflect(owner)
+        .getField(idField)
+        .reflectee;
+
+    return _repository(type, table)
+        .where((foreign) => foreign.id == id)
+        .first();
   }
 }
 

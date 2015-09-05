@@ -122,13 +122,24 @@ main() {
         ]);
 
         final thing = await repo.find(1);
+        final belongingsOfThing = await things.belongingsOf(thing).get().toList();
+        final belonging = belongingsOfThing[0];
+        final thingCopy = await belongings.thingOf(belonging);
 
-        final belongings = await things.belongingsOf(thing).get().toList();
+        expect([
+          thingCopy.id,
+          thingCopy.a,
+          thingCopy.b,
+          thingCopy.c,
+        ], equals([
+          thing.id,
+          thing.a,
+          thing.b,
+          thing.c,
+        ]));
 
-        print(driver.queries);
-
-        expect(belongings.length, equals(2));
-        expectBelonging(belongings[0], d: 1);
+        expect(belongingsOfThing.length, equals(2));
+        expectBelonging(belonging, d: 1);
       });
     });
 
@@ -145,6 +156,7 @@ class Thing {
 
 class Belonging {
   int id;
+  int overriden_id;
   int d;
 }
 
@@ -157,7 +169,9 @@ class ThingRepository extends Repository<Thing> {
 }
 
 class BelongingRepository extends Repository<Belonging> {
-
+  Future<Thing> thingOf(Belonging belonging) {
+    return this(belonging).belongsTo(Thing, field: 'overriden_id', table: 'overriden');
+  }
 }
 
 class MockInMemoryDriver extends InMemoryDriver {

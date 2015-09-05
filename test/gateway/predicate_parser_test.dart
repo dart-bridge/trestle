@@ -40,6 +40,7 @@ main() {
       assertParsesTo((a) => a.f == 1 && a.f2 == s, 'x.f == 1 && x.f2 == ?', ['string']);
       assertParsesTo((a) => a.f == i + 3 && a.f2 == s, 'x.f == 4 && x.f2 == ?', ['string']);
       assertParsesTo((a) => a['f'] == i + 3 || (a.f == i && a.f2 == s), 'x.f == 4 || (x.f == 1 && x.f2 == ?)', ['string']);
+      assertParsesTo((a) => a['f'] == i + 3 && a[s] == i, 'x.f == 4 && x.string == 1');
     });
 
     test('with expressions', () {
