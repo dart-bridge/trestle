@@ -4,4 +4,6 @@ class LimitConstraint implements Constraint {
   final int count;
 
   const LimitConstraint(int this.count);
+
+  String toString() => 'limited to $count';
 }

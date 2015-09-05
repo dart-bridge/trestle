@@ -202,6 +202,8 @@ class _AccessibleMap {
     return null;
   }
 
+  operator[](String name) => _field(name);
+
   String _changeCase(String name) {
     return name.replaceAll(new RegExp(r'(?=[A-Z])'), '_').toLowerCase();
   }

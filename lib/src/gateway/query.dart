@@ -26,4 +26,6 @@ implements Query {
   List<Constraint> get constraints => _constraints;
 
   _Query(Driver this.__driver, String this._table);
+
+  String toString() => 'On "$table": ${constraints.map((c) => c.toString()).join(', ')}';
 }

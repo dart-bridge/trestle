@@ -24,14 +24,15 @@ part 'delete_actions.dart';
 part 'predicate_parser.dart';
 
 class Gateway {
-  final Driver _driver;
+  final Driver driver;
 
-  Gateway(Driver this._driver);
+  Gateway(Driver this.driver);
 
-  Future connect() => _driver.connect();
+  Future connect() => driver.connect();
 
-  Future disconnect() => _driver.disconnect();
+  Future disconnect() => driver.disconnect();
 
-  Query table(String name) => new Query(_driver, name);
+  Query table(String name) =>
+      new Query(driver, name);
 }
 

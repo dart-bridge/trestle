@@ -108,14 +108,21 @@ class _PredicateRowMock {
   _PredicateRowMock(String this._name, Queue<bool> this._comparisonResponses);
 
   noSuchMethod(Invocation invocation) {
-    if (invocation.isGetter) {
-      if (!_fields.containsKey(invocation.memberName))
-        _fields[invocation.memberName] = (
-            new _PredicateFieldMock(MirrorSystem.getName(invocation.memberName),
-                _comparisonResponses));
-      return _fields[invocation.memberName];
-    }
+    if (invocation.isGetter)
+      return _field(invocation.memberName);
     return super.noSuchMethod(invocation);
+  }
+
+  operator [](String field) {
+    return _field(new Symbol(field));
+  }
+
+  _PredicateFieldMock _field(Symbol name) {
+    if (!_fields.containsKey(name))
+      _fields[name] = (
+          new _PredicateFieldMock(MirrorSystem.getName(name),
+              _comparisonResponses));
+    return _fields[name];
   }
 
   toString() => '$_name: [${_fields.values.join(', ')}]';

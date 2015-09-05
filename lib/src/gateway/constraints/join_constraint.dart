@@ -7,4 +7,6 @@ class JoinConstraint implements Constraint {
   final Query foreign;
 
   const JoinConstraint(JoinPredicate this.predicate, Query this.foreign);
+
+  String toString() => 'joined with "${foreign.table}"';
 }

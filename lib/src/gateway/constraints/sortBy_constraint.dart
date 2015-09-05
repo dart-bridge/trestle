@@ -8,4 +8,6 @@ class SortByConstraint implements Constraint {
   final int direction;
 
   const SortByConstraint(String this.field, [int this.direction = descending]);
+
+  String toString() => 'sorted by $field';
 }

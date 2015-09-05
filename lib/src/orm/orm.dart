@@ -6,3 +6,11 @@
 /// mapping, and should depend on the gateway library
 /// for retrieving the data to work with.
 library trestle.orm;
+
+import 'dart:async';
+import 'dart:mirrors';
+
+import '../gateway/gateway.dart';
+
+part 'repository.dart';
+part 'model.dart';

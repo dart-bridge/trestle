@@ -6,4 +6,6 @@ class WhereConstraint implements Constraint {
   final WherePredicate predicate;
 
   const WhereConstraint(WherePredicate this.predicate);
+
+  String toString() => 'filtered';
 }
