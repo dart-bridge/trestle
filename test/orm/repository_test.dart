@@ -164,13 +164,13 @@ class ThingRepository extends Repository<Thing> {
   String get table => 'overriden';
 
   RepositoryQuery<Belonging> belongingsOf(Thing thing) {
-    return this(thing).hasMany(Belonging);
+    return relationship(thing).hasMany(Belonging);
   }
 }
 
 class BelongingRepository extends Repository<Belonging> {
   Future<Thing> thingOf(Belonging belonging) {
-    return this(belonging).belongsTo(Thing, field: 'overriden_id', table: 'overriden');
+    return relationship(belonging).belongsTo(Thing, field: 'overriden_id', table: 'overriden');
   }
 }
 

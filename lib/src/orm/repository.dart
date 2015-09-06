@@ -66,7 +66,7 @@ class Repository<M> {
     return _query().update(model);
   }
 
-  Relationship<M> call(M model) {
+  Relationship<M> relationship(M model) {
     return new Relationship<M>(this, _gateway, model);
   }
 }
