@@ -1,62 +1,30 @@
-library example.gateway;
+import 'package:trestle/gateway.dart';
+import 'session.dart';
 
-import 'package:trestle/src/gateway/gateway.dart';
-import 'package:trestle/src/drivers/drivers.dart';
-import 'driver.dart';
+final driver = new InMemoryDriver();
 
-part 'query.dart';
-part 'schema.dart';
-
-main() async {
-  final loggingGateway = new Gateway(new LoggingDriver());
-  print('CREATE:');
-  await create(loggingGateway);
-  print('\n');
-  print('READ:');
-  await read(loggingGateway);
-  print('\n');
-  print('UPDATE:');
-  await update(loggingGateway);
-  print('\n');
-  print('DELETE:');
-  await delete(loggingGateway);
-
-  var gateway = new Gateway(new InMemoryDriver());
-
-  await gateway.table('users').addAll([
-    {'id': 1, 'first_name': 'John', 'last_name': 'Doe', 'age': 37, 'address_id': 1},
-    {'id': 2, 'first_name': 'Jane', 'last_name': 'Doe', 'age': 35, 'address_id': 1},
-    {'id': 3, 'first_name': 'David', 'last_name': 'Smith', 'age': 28, 'address_id': 2},
-    {'id': 4, 'first_name': 'Jenny', 'last_name': 'Jackson', 'age': 24, 'address_id': 3},
+main() => session(driver, (Gateway gateway) async {
+  gateway.table('users').addAll([
+    {'first_name': 'Jane', 'last_name': 'Doe', 'age': 36},
+    {'first_name': 'John', 'last_name': 'Doe', 'age': 35},
   ]);
 
-  await gateway.table('addresses').addAll([
-    {'id': 1, 'street': 'First st.', 'number': 15, 'apartment_no': 172},
-    {'id': 2, 'street': 'Second st.', 'number': 2, 'apartment_no': null},
-    {'id': 3, 'street': 'Second st.', 'number': 5, 'apartment_no': null},
-  ]);
+  await gateway.table('users')
+      .count(); // 2
+  await gateway.table('users')
+      .average('age'); // 35.5
 
-  print('All users:');
-  print(await gateway.table('users')
-  .get().toList());
+  await gateway.table('users')
+      .get(['first_name']).toList(); // [{first_name: Jane}, {first_name: John}]
 
-  print('All addresses:');
-  print(await gateway.table('addresses')
-  .get().toList());
+  await gateway.table('users')
+      .where((user) => user.first_name == 'Jane')
+      .increment('age'); // Jane's age is now 37
 
-  print('All first names of users named Doe:');
-  print(await gateway.table('users')
-  .where((user) => user.lastName == 'Doe')
-  .get(['first_name']).toList());
+  await gateway.table('users')
+      .sortBy('age', 'desc')
+      .get(['age']).toList(); // [{age: 35}, {age: 37}]
 
-  print('The sum of the ages of all users not called Doe:');
-  print(await gateway.table('users')
-  .where((user) => user.lastName != 'Doe')
-  .sum('age'));
-
-  print('First names and street addresses for all users:');
-  print(await gateway.table('users')
-  .join('addresses', (user, address) => user.addressId == address.id)
-  .get(['first_name', 'street', 'number', 'apartment_no']).toList());
-}
-
+  await gateway.table('users')
+      .delete(); // "users" is now truncated
+});

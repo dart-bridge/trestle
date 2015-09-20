@@ -22,6 +22,7 @@ part 'read_actions.dart';
 part 'update_actions.dart';
 part 'delete_actions.dart';
 part 'predicate_parser.dart';
+part 'schema.dart';
 
 class Gateway {
   final Driver driver;
@@ -34,5 +35,13 @@ class Gateway {
 
   Query table(String name) =>
       new Query(driver, name);
+
+  create(String name, callback) {
+    throw new UnsupportedError('To be implemented');
+  }
+
+  alter(String name, callback) {
+    throw new UnsupportedError('To be implemented');
+  }
 }
 
