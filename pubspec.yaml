@@ -1,12 +1,13 @@
 name: trestle
 author: Emil Persson <emil.n.persson@gmail.com>
 homepage: https://github.com/dart-bridge/trestle
-version: 0.1.1
+version: 0.2.0
 environment:
   sdk: '>=1.12.0 <2.0.0'
 description: Database gateway and ORM
 dependencies:
   sqljocky: '^0.13.0'
   postgresql: '^0.3.0'
+  sqlite3_driver: '^0.0.3'
 dev_dependencies:
   test: any

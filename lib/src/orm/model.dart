@@ -1,6 +1,5 @@
 part of trestle.orm;
 
-@proxy
-abstract class Model<M> {
+abstract class Model {
   int id;
 }

@@ -6,16 +6,19 @@ abstract class SqlDriver implements Driver {
   String wrapSystemIdentifier(String systemId);
 
   Future _aggregate(String aggregate,
-                    String fieldSelector,
-                    String alias,
-                    Query query) {
+      String fieldSelector,
+      String alias,
+      Query query) {
     final List<String> queryParts = [];
     final List variables = [];
 
-    queryParts.add('SELECT $aggregate($fieldSelector) AS $alias FROM ${wrapSystemIdentifier(query.table)}');
+    queryParts.add(
+        'SELECT $aggregate($fieldSelector) AS $alias FROM ${wrapSystemIdentifier(
+            query.table)}');
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).first.then((r) => r[alias]);
+    return execute('${queryParts.join(' ')};', variables).first.then((
+        r) => r[alias]);
   }
 
   Future<int> count(Query query) {
@@ -54,7 +57,10 @@ abstract class SqlDriver implements Driver {
 
   Future addAll(Query query, Iterable<Map<String, dynamic>> rows) {
     final variables = [];
-    final multiQuery = rows.map((r) => _addQuery(variables, query, r)).join(' ');
+    final multiQuery = rows.map((r) => _addQuery(variables, query, r)).join(' ')
+        .replaceAllMapped(
+        new RegExp(r'; INSERT .*? VALUES (\(.*?\))'),
+        (m) => ', ${m[1]}');
     return execute(multiQuery, variables).toList();
   }
 
@@ -75,7 +81,9 @@ abstract class SqlDriver implements Driver {
 
     queryParts.add('SELECT');
 
-    queryParts.add(fields.isEmpty ? '*' : '${fields.map(wrapSystemIdentifier).join(', ')}');
+    queryParts.add(
+        fields.isEmpty ? '*' : '${fields.map(wrapSystemIdentifier).join(
+            ', ')}');
 
     queryParts.add('FROM ${wrapSystemIdentifier(query.table)}');
 
@@ -117,7 +125,8 @@ abstract class SqlDriver implements Driver {
     return _inOrDecrement(query, field, amount, '-');
   }
 
-  Future _inOrDecrement(Query query, String field, int amount, String operator) {
+  Future _inOrDecrement(Query query, String field, int amount,
+      String operator) {
     final List<String> queryParts = [];
     final List variables = [];
 
@@ -125,7 +134,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.add(
         '${wrapSystemIdentifier(field)} '
-        '= ${wrapSystemIdentifier(field)} $operator $amount');
+            '= ${wrapSystemIdentifier(field)} $operator $amount');
 
     queryParts.addAll(_parseQuery(query, variables));
 
@@ -140,9 +149,9 @@ class _ConstraintParser {
   final List _variables;
 
   _ConstraintParser(SqlDriver this._driver,
-                    Query this._query,
-                    Constraint this._constraint,
-                    List this._variables);
+      Query this._query,
+      Constraint this._constraint,
+      List this._variables);
 
   String call() {
     if (_constraint is WhereConstraint) return _whereConstraint();
@@ -156,33 +165,39 @@ class _ConstraintParser {
   }
 
   String _sortByConstraint() {
-    return 'SORT BY ${_driver.wrapSystemIdentifier((_constraint as SortByConstraint).field)} '
-    '${(_constraint as SortByConstraint).direction == SortByConstraint.descending ? 'DESC' : 'ASC'}';
+    return 'SORT BY ${_driver.wrapSystemIdentifier(
+        (_constraint as SortByConstraint).field)} '
+        '${(_constraint as SortByConstraint).direction ==
+        SortByConstraint.descending ? 'DESC' : 'ASC'}';
   }
 
   String _groupByConstraint() {
-    return 'GROUP BY ${_driver.wrapSystemIdentifier((_constraint as GroupByConstraint).field)}';
+    return 'GROUP BY ${_driver.wrapSystemIdentifier(
+        (_constraint as GroupByConstraint).field)}';
   }
 
   String _joinConstraint() {
-    return 'JOIN ${_driver.wrapSystemIdentifier((_constraint as JoinConstraint).foreign.table)} '
-    'ON ${_parseJoinPredicate((_constraint as JoinConstraint).predicate)}';
+    return 'JOIN ${_driver.wrapSystemIdentifier(
+        (_constraint as JoinConstraint).foreign.table)} '
+        'ON ${_parseJoinPredicate((_constraint as JoinConstraint).predicate)}';
   }
 
-  String _parsePredicate(Function predicate, Iterable params, [String treat(String exp)]) {
+  String _parsePredicate(Function predicate, Iterable params,
+      [String treat(String exp)]) {
     final predicateExpression = PredicateParser.parse(predicate);
     final expression = predicateExpression.expression(params);
     _variables.addAll(predicateExpression.variables);
 
     return (treat == null ? (s) => s : treat)(expression
-    .replaceAllMapped(new RegExp(r'"(.*?)"'), ($) => "'${$[1]}'")
-    .replaceAll('==', '=')
-    .replaceAll('&&', 'AND')
-    .replaceAll('||', 'OR'));
+        .replaceAllMapped(new RegExp(r'"(.*?)"'), ($) => "'${$[1]}'")
+        .replaceAll('==', '=')
+        .replaceAll('&&', 'AND')
+        .replaceAll('||', 'OR'));
   }
 
   String _parseJoinPredicate(JoinPredicate predicate) {
-    return _parsePredicate(predicate, [_query.table, (_constraint as JoinConstraint).foreign.table]);
+    return _parsePredicate(predicate,
+        [_query.table, (_constraint as JoinConstraint).foreign.table]);
   }
 
   String _distinctConstraint() {
@@ -198,12 +213,13 @@ class _ConstraintParser {
   }
 
   String _whereConstraint() {
-    return 'WHERE ${_parseWherePredicate((_constraint as WhereConstraint).predicate)}';
+    return 'WHERE ${_parseWherePredicate(
+        (_constraint as WhereConstraint).predicate)}';
   }
 
   String _parseWherePredicate(WherePredicate predicate) {
     return _parsePredicate(predicate, [_query.table], (String s) => s
-    .replaceAllMapped(new RegExp('${_query.table}'r'\.(\w+)'), ($) {
+        .replaceAllMapped(new RegExp('${_query.table}'r'\.(\w+)'), ($) {
       return _driver.wrapSystemIdentifier($[1]);
     }));
   }

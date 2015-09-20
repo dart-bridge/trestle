@@ -145,6 +145,12 @@ class _PredicateFieldMock {
 
   operator <(v) => _registerComparison('<', v);
 
+  operator %(v) => _registerComparison('%', v);
+
+  operator ^(v) => _registerComparison('^', v);
+
+  operator ~/(v) => _registerComparison('~/', v);
+
   _registerComparison(String operator, value) {
     operations.add([operator, value]);
     return _getResponse();

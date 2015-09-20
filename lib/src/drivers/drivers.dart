@@ -10,9 +10,12 @@ library trestle.drivers;
 
 import 'dart:async';
 import 'dart:mirrors';
+import 'dart:io';
 
 import 'package:trestle/src/gateway/constraints/constraints.dart';
 import 'package:trestle/src/gateway/gateway.dart';
+import 'package:sqlite3_driver/sqlite3_driver.dart' as sqlite;
+import 'package:sqlite3_driver/dbc.dart' as sqlite;
 import 'package:sqljocky/sqljocky.dart' as sqljocky;
 import 'package:postgresql/postgresql.dart' as postgresql;
 

@@ -181,6 +181,8 @@ class InMemoryDriver implements Driver {
 
   Future disconnect() async {
   }
+
+  String toString() => 'InMemoryDriver()';
 }
 
 class _AccessibleMap {

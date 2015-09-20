@@ -158,7 +158,7 @@ main() {
 
     test('add all', () async {
       await query((q) => q.addAll([{'x': 'y'}, {'x': 'z'}]));
-      expectQuery('INSERT INTO "test" ("x") VALUES (?); INSERT INTO "test" ("x") VALUES (?);', ['y', 'z']);
+      expectQuery('INSERT INTO "test" ("x") VALUES (?), (?);', ['y', 'z']);
     });
   });
 
