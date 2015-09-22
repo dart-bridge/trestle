@@ -4,14 +4,14 @@ import 'package:trestle/gateway.dart';
 import 'dart:async';
 
 main() {
-  Repository<Thing> repo;
+  Repository repo;
   MockInMemoryDriver driver;
 
   Future table(String table, List<Map<String, dynamic>> fields) {
     return driver.addAll(new Query(driver, table), fields);
   }
 
-  expectModel(Thing model, {int a, int b, int c}) {
+  expectThing(dynamic model, {int a, int b, int c}) {
     expect(model.a, equals(a));
     expect(model.b, equals(b));
     expect(model.c, equals(c));
@@ -27,9 +27,9 @@ main() {
 
       final res = await repo.all().toList();
 
-      expectModel(res[0], a: 1, b: 2, c: 3);
-      expectModel(res[1], a: 4, b: 5, c: 6);
-      expectModel(res[2], a: 7, b: 8, c: 9);
+      expectThing(res[0], a: 1, b: 2, c: 3);
+      expectThing(res[1], a: 4, b: 5, c: 6);
+      expectThing(res[2], a: 7, b: 8, c: 9);
     });
 
     test('extends the gateway query', () async {
@@ -45,7 +45,7 @@ main() {
 
       expect(res.length, equals(1));
 
-      expectModel(res[0], a: 4, b: 5, c: 6);
+      expectThing(res[0], a: 4, b: 5, c: 6);
     });
 
     test('can insert new models', () async {
@@ -54,7 +54,7 @@ main() {
         ..b = 2
         ..c = 3);
 
-      expectModel(await repo.first(), a: 1, b: 2, c: 3);
+      expectThing(await repo.first(), a: 1, b: 2, c: 3);
     });
 
     test('models can have ids', () async {
@@ -71,7 +71,7 @@ main() {
 
       final persistedThing = await repo.find(1);
 
-      expectModel(persistedThing, a: 7, b: 5, c: 6);
+      expectThing(persistedThing, a: 7, b: 5, c: 6);
       expect(await repo.count(), equals(1));
       expect(persistedThing.id, equals(1));
     });
@@ -145,6 +145,64 @@ main() {
 
     testsForBothRepoStyles();
   });
+
+  group('extending Model', () {
+    Gateway gateway;
+
+    setUp(() {
+      repo = new Repository<ThingModel>();
+      repo.connect(gateway = new Gateway(driver = new MockInMemoryDriver()));
+    });
+
+    test('persists as usual', () async {
+      await table('thing_models', [
+        {'id': 1, 'a': 1, 'b': 2, 'c': 3},
+        {'id': 2, 'a': 4, 'b': 5, 'c': 6},
+        {'id': 3, 'a': 7, 'b': 8, 'c': 9},
+      ]);
+
+      ThingModel model1 = await repo.find(1);
+      ThingModel model2 = await repo.find(2);
+      ThingModel model3 = await repo.find(3);
+
+      expectThing(model1, a: 1, b: 2, c: 3);
+      expectThing(model2, a: 4, b: 5, c: 6);
+      expectThing(model3, a: 7, b: 8, c: 9);
+    });
+
+    test('only persists annotated fields', () async {
+      final model = new ThingModel()
+          ..id = 1
+          ..a = 1
+          ..b = 2
+          ..c = 3
+          ..willNotBePersisted = 'x';
+
+      await repo.add(model);
+
+      final ThingModel retrieved = await repo.find(1);
+
+      expect(retrieved.willNotBePersisted, isNot(equals('x')));
+    });
+
+    test('annotations override column name', () async {
+      await table('thing_models', [
+        {'id': 1, 'created_at': new DateTime(2015)}
+      ]);
+
+      final ThingModel retrieved = await repo.find(1);
+
+      expect(retrieved.createdAt, equals(new DateTime(2015)));
+
+      retrieved.createdAt = new DateTime(2016);
+
+      await repo.update(retrieved);
+
+      expect(await gateway.table('thing_models').get(['created_at']).toList(), equals([
+        {'created_at': new DateTime(2016)}
+      ]));
+    });
+  });
 }
 
 class Thing {
@@ -158,6 +216,18 @@ class Belonging {
   int id;
   int overriden_id;
   int d;
+}
+
+class ThingModel extends Model {
+  @field int a;
+  @field int b;
+  @field int c;
+  String willNotBePersisted;
+}
+
+class BelongingModel extends Model {
+  @Field('overriden_id') int overridenId;
+  @field int d;
 }
 
 class ThingRepository extends Repository<Thing> {

@@ -19,7 +19,7 @@ class SqliteDriver extends SqlDriver with SqlStandards {
   Stream<Map<String, dynamic>> execute(String query, List variables) async* {
     final statement = new sqlite.Sqlite3Statement(_connection, query);
     final stream = await statement.executeQuery(variables);
-    yield* stream.map(_transformRows);
+    yield* stream.map(_transformRows).map(deserialize);
   }
 
   Map<String, dynamic> _transformRows(sqlite.SqlDataRow row) {

@@ -2,7 +2,7 @@ import 'package:trestle/trestle.dart';
 import 'package:trestle/gateway.dart';
 import 'session.dart';
 
-final driver = new InMemoryDriver();
+final driver = new SqliteDriver(':memory:');
 
 main() => session(driver, (Gateway gateway) async {
   final repo = new Repository<User>()
@@ -18,7 +18,7 @@ main() => session(driver, (Gateway gateway) async {
 
   await repo.all().toList(); // [Jane, John]
 
-  await repo.where((user) => user.first_name == 'Jane')
+  await repo.where((user) => user.firstName == 'Jane')
       .increment('age'); // Jane's age is now 37
 
   // TODO: await repo.sortBy('age', 'desc')
@@ -27,14 +27,14 @@ main() => session(driver, (Gateway gateway) async {
   // TODO: await repo.clear(); // "users" is now truncated
 });
 
-class User {
-  String first_name;
-  String last_name;
-  int age;
+class User extends Model {
+  @Field('first_name') String firstName;
+  @Field('last_name') String lastName;
+  @field int age;
 
   User();
 
-  User.create(String this.first_name, String this.last_name, int this.age);
+  User.create(String this.firstName, String this.lastName, int this.age);
 
-  String toString() => first_name;
+  String toString() => firstName;
 }

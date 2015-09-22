@@ -43,7 +43,7 @@ class MySqlDriver extends SqlDriver {
     final sqljocky.Query preparedQuery = await _connection.prepare(query);
     final sqljocky.Results results = await preparedQuery.execute(variables);
     Iterable<String> fieldNames = results.fields.map((f) => f.name);
-    yield* results.map((row) => new Map.fromIterables(fieldNames, row));
+    yield* results.map((row) => new Map.fromIterables(fieldNames, row)).map(deserialize);
   }
 
   String wrapSystemIdentifier(String systemId) {

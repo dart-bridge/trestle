@@ -17,7 +17,7 @@ abstract class SqlDriver implements Driver {
             query.table)}');
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).first.then((
+    return execute('${queryParts.join(' ')};', _serialize(variables)).first.then((
         r) => r[alias]);
   }
 
@@ -52,7 +52,7 @@ abstract class SqlDriver implements Driver {
   Future add(Query query, Map<String, dynamic> row) {
     final variables = [];
     final singleQuery = _addQuery(variables, query, row);
-    return execute(singleQuery, variables).toList();
+    return execute(singleQuery, _serialize(variables)).toList();
   }
 
   Future addAll(Query query, Iterable<Map<String, dynamic>> rows) {
@@ -61,7 +61,7 @@ abstract class SqlDriver implements Driver {
         .replaceAllMapped(
         new RegExp(r'; INSERT .*? VALUES (\(.*?\))'),
         (m) => ', ${m[1]}');
-    return execute(multiQuery, variables).toList();
+    return execute(multiQuery, _serialize(variables)).toList();
   }
 
   Future delete(Query query) {
@@ -72,7 +72,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).toList();
+    return execute('${queryParts.join(' ')};', _serialize(variables)).toList();
   }
 
   Stream<Map<String, dynamic>> get(Query query, Iterable<String> fields) {
@@ -89,7 +89,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables);
+    return execute('${queryParts.join(' ')};', _serialize(variables));
   }
 
   Iterable<String> _parseQuery(Query query, List variables) {
@@ -114,7 +114,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).toList();
+    return execute('${queryParts.join(' ')};', _serialize(variables)).toList();
   }
 
   Future increment(Query query, String field, int amount) {
@@ -138,7 +138,31 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', variables).toList();
+    return execute('${queryParts.join(' ')};', _serialize(variables)).toList();
+  }
+
+  List _serialize(List variables) {
+    return variables.map(_serializeValue).toList();
+  }
+
+  Object _serializeValue(Object value) {
+    if (value is String || value is num) return value;
+    if (value is DateTime) return value.toIso8601String();
+    return value.toString();
+  }
+
+  Map<String, dynamic> deserialize(Map<String, dynamic> row) {
+    return new Map.fromIterables(
+        row.keys,
+        row.values.map(_deserialize));
+  }
+
+  Object _deserialize(Object value) {
+    try {
+      return DateTime.parse(value);
+    } catch(e) {
+      return value;
+    }
   }
 }
 

@@ -117,6 +117,29 @@ class RepositoryQuery<M> {
   final Query _query;
   Iterable<Symbol> _fields;
   final ClassMirror _classMirror;
+  final TypeMirror _modelTypeMirror = reflectType(Model);
+  Map<Symbol, Field> __annotations;
+
+  Map<Symbol, Field> get _annotations => __annotations ??= _getAnnotations();
+
+  Map<Symbol, Field> _getAnnotations() {
+    final annotationDecs = _getAllDeclarations(_classMirror)
+        .where((d) => d.metadata
+        .any(_isFieldAnnotation));
+    return new Map.fromIterables(
+        annotationDecs.map((d) => d.simpleName),
+        annotationDecs.map((d) => d.metadata.firstWhere(_isFieldAnnotation).reflectee));
+  }
+
+  bool _isFieldAnnotation(InstanceMirror annotation) {
+    return annotation.reflectee is Field;
+  }
+
+  List<DeclarationMirror> _getAllDeclarations(ClassMirror classMirror) {
+    if (classMirror == null) return [];
+    return []..addAll(_getAllDeclarations(classMirror.superclass))
+        ..addAll(classMirror.declarations.values);
+  }
 
   RepositoryQuery._of(Type type, Query query)
       : _query = query,
@@ -132,27 +155,48 @@ class RepositoryQuery<M> {
 
   Iterable<Symbol> _listFields() {
     return _classMirror.instanceMembers.values
-        .where((MethodMirror m) => m.isGetter
+        .where(_shouldPersist)
+        .map((MethodMirror m) => m.simpleName);
+  }
+
+  bool _shouldPersist(MethodMirror m) {
+    final isMutableProperty = m.isGetter
         && !m.isPrivate
         && _classMirror.instanceMembers.containsKey(
-            new Symbol(MirrorSystem.getName(m.simpleName) + '=')))
-        .map((MethodMirror m) => m.simpleName);
+            new Symbol(MirrorSystem.getName(m.simpleName) + '='));
+
+    if (!isMutableProperty) return false;
+
+    if (_classMirror.isAssignableTo(_modelTypeMirror))
+      return _isAnnotatedAsField(m.simpleName);
+
+    return true;
+  }
+
+  bool _isAnnotatedAsField(Symbol name) {
+    return _annotations.containsKey(name);
   }
 
   M _modelFromMap(Map<String, dynamic> map) {
     final instance = _classMirror.newInstance(const Symbol(''), []);
     for (final field in map.keys) {
       try {
-        instance.setField(new Symbol(field), map[field]);
+        instance.setField(_symbolizeField(field), map[field]);
       } catch (e) {}
     }
     return instance.reflectee;
   }
 
+  Symbol _symbolizeField(String field) {
+    return _annotations.keys.firstWhere(
+        (s) => _annotations[s].columnName == field,
+            orElse: () => new Symbol(field));
+  }
+
   Map<String, dynamic> _mapFromModel(M model) {
     final mirror = reflect(model);
     final map = new Map.fromIterables(
-        fields.map(MirrorSystem.getName),
+        fields.map(_stringifySymbol),
         fields.map((f) => mirror
             .getField(f)
             .reflectee)
@@ -161,6 +205,12 @@ class RepositoryQuery<M> {
       if (map[key] == null)
         map.remove(key);
     return map;
+  }
+
+  String _stringifySymbol(Symbol name) {
+    if (_annotations.containsKey(name))
+      return _annotations[name].columnName ?? MirrorSystem.getName(name);
+    return MirrorSystem.getName(name);
   }
 
   Future _add(M model) {

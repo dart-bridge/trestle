@@ -25,7 +25,7 @@ class PostgresqlDriver extends SqlDriver with SqlStandards {
   Stream<Map<String, dynamic>> execute(String query, List variables) {
     return _connection
         .query(_questionMarksToSequence(query), variables.asMap())
-        .map(_rowToMap);
+        .map(_rowToMap).map(deserialize);
   }
 
   String _questionMarksToSequence(String query) {
