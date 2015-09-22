@@ -10,6 +10,8 @@ library trestle.gateway;
 import 'dart:async';
 import 'dart:mirrors';
 import 'dart:collection';
+import 'dart:core';
+import 'dart:core' as core show int;
 
 import 'constraints/constraints.dart';
 
@@ -23,6 +25,9 @@ part 'update_actions.dart';
 part 'delete_actions.dart';
 part 'predicate_parser.dart';
 part 'schema.dart';
+part 'column.dart';
+part 'foreign_key.dart';
+part 'migration.dart';
 
 class Gateway {
   final Driver driver;
@@ -36,11 +41,23 @@ class Gateway {
   Query table(String name) =>
       new Query(driver, name);
 
-  create(String name, callback) {
+  Future create(String name, Future blueprint(Schema schema)) {
     throw new UnsupportedError('To be implemented');
   }
 
-  alter(String name, callback) {
+  Future alter(String name, Future blueprint(Schema schema)) {
+    throw new UnsupportedError('To be implemented');
+  }
+
+  Future drop(String name) {
+    throw new UnsupportedError('To be implemented');
+  }
+
+  Future migrate(Map<String, Type> migrations) {
+    throw new UnsupportedError('To be implemented');
+  }
+
+  Future rollback() {
     throw new UnsupportedError('To be implemented');
   }
 }
