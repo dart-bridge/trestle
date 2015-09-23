@@ -189,7 +189,7 @@ final migrations = [
 gateway.migrate(migrations);
 
 // Somewhere else – remember to import the same migrations set
-gateway.migrate(migrations);
+gateway.rollback(migrations);
 ```
 
 ---
