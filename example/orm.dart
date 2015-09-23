@@ -14,17 +14,17 @@ main() => session(driver, (Gateway gateway) async {
   ]);
 
   await repo.count(); // 2
-  // TODO: await repo.average('age'); // 35.5
+  await repo.average('age'); // 35.5
 
   await repo.all().toList(); // [Jane, John]
 
   await repo.where((user) => user.firstName == 'Jane')
       .increment('age'); // Jane's age is now 37
 
-  // TODO: await repo.sortBy('age', 'desc')
-  //    .get().toList(); // [John, Jane]
+  await repo.sortBy('age', 'desc')
+      .get().toList(); // [John, Jane]
 
-  // TODO: await repo.clear(); // "users" is now truncated
+  await repo.clear(); // "users" is now truncated
 });
 
 class User extends Model {

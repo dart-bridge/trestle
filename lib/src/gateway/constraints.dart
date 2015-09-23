@@ -26,8 +26,10 @@ class _Constraints implements Constraints {
   List<Constraint> get constraints => null;
 
   Query _fluentAddConstraint(Constraint constraint) {
-    constraints.add(constraint);
-    return _query;
+    final newQuery = new Query(_driver, _query.table);
+    newQuery.constraints.addAll(constraints);
+    newQuery.constraints.add(constraint);
+    return newQuery;
   }
 
   Query distinct() => _fluentAddConstraint(const DistinctConstraint());

@@ -15,7 +15,7 @@ class Repository<M> {
     final q = new Query(_gateway.driver, table);
     if (M == dynamic) return new RepositoryQuery._of(
         _classMirror.reflectedType, q);
-    return new RepositoryQuery<M>(q);
+    return new RepositoryQuery._copy(_classMirror, q);
   }
 
   void connect(Gateway gateway) {
@@ -69,6 +69,18 @@ class Repository<M> {
   Relationship<M> relationship(M model) {
     return new Relationship<M>(this, _gateway, model);
   }
+
+  Future<double> average(String field) {
+    return _query().average(field);
+  }
+
+  RepositoryQuery<M> sortBy(String field, [String direction]) {
+    return _query().sortBy(field, direction);
+  }
+
+  Future clear() {
+    return _query().delete();
+  }
 }
 
 class Relationship<M> {
@@ -120,6 +132,18 @@ class RepositoryQuery<M> {
   final TypeMirror _modelTypeMirror = reflectType(Model);
   Map<Symbol, Field> __annotations;
 
+  RepositoryQuery._copy(ClassMirror classMirror, Query query)
+      : _query = query,
+        _classMirror = classMirror;
+
+  RepositoryQuery._of(Type type, Query query)
+      : _query = query,
+        _classMirror = reflectType(type);
+
+  RepositoryQuery(Query query)
+      : _query = query,
+        _classMirror = reflectType(M);
+
   Map<Symbol, Field> get _annotations => __annotations ??= _getAnnotations();
 
   Map<Symbol, Field> _getAnnotations() {
@@ -140,14 +164,6 @@ class RepositoryQuery<M> {
     return []..addAll(_getAllDeclarations(classMirror.superclass))
         ..addAll(classMirror.declarations.values);
   }
-
-  RepositoryQuery._of(Type type, Query query)
-      : _query = query,
-        _classMirror = reflectType(type);
-
-  RepositoryQuery(Query query)
-      : _query = query,
-        _classMirror = reflectType(M);
 
   Iterable<Symbol> get fields {
     return _fields ?? (_fields = _listFields());
@@ -238,13 +254,11 @@ class RepositoryQuery<M> {
   }
 
   RepositoryQuery<M> distinct() {
-    _query.distinct();
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.distinct());
   }
 
   RepositoryQuery<M> _find(int id) {
-    _query.find(id);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.find(id));
   }
 
   Future<M> first() {
@@ -256,8 +270,7 @@ class RepositoryQuery<M> {
   }
 
   RepositoryQuery<M> groupBy(String field) {
-    _query.groupBy(field);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.groupBy(field));
   }
 
   Future increment(String field, [int amount = 1]) {
@@ -265,8 +278,7 @@ class RepositoryQuery<M> {
   }
 
   RepositoryQuery<M> limit(int count) {
-    _query.limit(count);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.limit(count));
   }
 
   Future<int> max(String field) {
@@ -278,13 +290,11 @@ class RepositoryQuery<M> {
   }
 
   RepositoryQuery<M> offset(int count) {
-    _query.offset(count);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.offset(count));
   }
 
   RepositoryQuery<M> sortBy(String field, [String direction = 'ascending']) {
-    _query.sortBy(field, direction);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.sortBy(field, direction));
   }
 
   Future<int> sum(String field) {
@@ -302,7 +312,6 @@ class RepositoryQuery<M> {
   }
 
   RepositoryQuery<M> where(bool predicate(M row)) {
-    _query.where(predicate);
-    return this;
+    return new RepositoryQuery._copy(_classMirror, _query.where(predicate));
   }
 }
