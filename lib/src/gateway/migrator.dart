@@ -13,19 +13,18 @@ class Migrator {
   Future run(Set<Type> migrations) async {
     try {
       await _createTable();
-    } finally {
-      final runMigrations = await _getRunMigrations().toList();
-      final chargedMigrations = await _chargeMigrations(migrations);
-      if (!_startsWith(chargedMigrations.keys, runMigrations))
-        throw new MigrationException(
-            'New migrations list is not compatible with the old one. '
-                'Please roll back first.');
+    } catch (e) {}
+    final runMigrations = await _getRunMigrations().toList();
+    final chargedMigrations = await _chargeMigrations(migrations);
+    if (!_startsWith(chargedMigrations.keys, runMigrations))
+      throw new MigrationException(
+          'New migrations list is not compatible with the old one. '
+              'Please roll back first.');
 
-      for(final old in runMigrations)
-          chargedMigrations.remove(old);
+    for (final old in runMigrations)
+      chargedMigrations.remove(old);
 
-      await _migrate(chargedMigrations);
-    }
+    await _migrate(chargedMigrations);
   }
 
   Future _migrate(Map<String, Transaction> transactions) async {
@@ -89,6 +88,7 @@ class Migrator {
     final chargedRollbacks = _chargeRollbacks(migrations);
     for (final old in runMigrations.reversed)
       await chargedRollbacks[old](_gateway);
+    await _gateway.drop('__migrations');
   }
 }
 
