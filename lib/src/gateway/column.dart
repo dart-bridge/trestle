@@ -30,6 +30,7 @@ class Column {
   bool isNullable = true;
   ForeignKey foreignKey;
   bool isPrimaryKey = false;
+  bool shouldBeUnique = false;
   bool shouldIncrement = false;
 
   Column(String this.name, ColumnType this.type, int this.length);
@@ -55,5 +56,10 @@ class Column {
 
   Column incrementingPrimaryKey() {
     return nullable(false).primaryKey().increments();
+  }
+
+  Column unique() {
+    shouldBeUnique = true;
+    return this;
   }
 }

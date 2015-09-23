@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:trestle/src/gateway/gateway.dart';
+import 'package:trestle/gateway.dart';
 
 main() {
   group('invalid predicates', () {

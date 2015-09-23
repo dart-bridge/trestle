@@ -28,6 +28,7 @@ part 'schema.dart';
 part 'column.dart';
 part 'foreign_key.dart';
 part 'migration.dart';
+part 'migrator.dart';
 
 class Gateway {
   final Driver driver;
@@ -59,12 +60,12 @@ class Gateway {
     return driver.dropTable(name);
   }
 
-  Future migrate(Map<String, Type> migrations) {
-    throw new UnsupportedError('To be implemented');
+  Future migrate(Set<Type> migrations) {
+    return new Migrator(this).run(migrations);
   }
 
-  Future rollback() {
-    throw new UnsupportedError('To be implemented');
+  Future rollback(Set<Type> migrations) {
+    return new Migrator(this).rollback(migrations);
   }
 }
 
