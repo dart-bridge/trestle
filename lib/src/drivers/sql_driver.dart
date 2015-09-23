@@ -3,6 +3,8 @@ part of trestle.drivers;
 abstract class SqlDriver implements Driver {
   Stream<Map<String, dynamic>> execute(String statement, List variables);
 
+  String get autoIncrementKeyword;
+
   String wrapSystemIdentifier(String systemId);
 
   Future _aggregate(String aggregate,
@@ -17,8 +19,8 @@ abstract class SqlDriver implements Driver {
             query.table)}');
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', _serialize(variables)).first.then((
-        r) => r[alias]);
+    return execute('${queryParts.join(' ')};', _serialize(variables)).first
+        .then((r) => r[alias]);
   }
 
   Future<int> count(Query query) {
@@ -160,9 +162,105 @@ abstract class SqlDriver implements Driver {
   Object _deserialize(Object value) {
     try {
       return DateTime.parse(value);
-    } catch(e) {
+    } catch (e) {
       return value;
     }
+  }
+
+  Future alterTable(String name, Schema schema) async {
+    final parts = <String>[];
+    parts.add('ALTER TABLE ${wrapSystemIdentifier(name)}');
+    parts.add(_dropColumnParts(schema));
+    parts.add(_addColumnParts(schema));
+    await execute(parts.where((s) => s != '').join(' '), []).toList();
+  }
+
+  String _addColumnParts(Schema schema) {
+    if (schema.columns.isEmpty) return '';
+    final columns = schema.columns.map(parseSchemaColumn).join(', ');
+    return 'ADD COLUMN $columns;';
+  }
+
+  String _dropColumnParts(Schema schema) {
+    if (schema.columnsToDrop.isEmpty) return '';
+    final columns = schema.columnsToDrop.map(wrapSystemIdentifier).join(', ');
+    return 'DROP COLUMN $columns;';
+  }
+
+  Future createTable(String name, Schema schema) async {
+    await execute('CREATE TABLE ${wrapSystemIdentifier(name)} '
+        '(${_parseSchema(schema)});', []).toList();
+  }
+
+  String _parseSchema(Schema schema) {
+    return schema.columns.map(parseSchemaColumn).join(', ');
+  }
+
+  Future dropTable(String name) async {
+    await execute('DROP TABLE ${wrapSystemIdentifier(name)};', []).toList();
+  }
+
+  String parseSchemaColumn(Column column) {
+    return '${wrapSystemIdentifier(column.name)} '
+        '${_parseColumnType(column)} '
+        '${_parseColumnConstraints(column)}'.trim();
+  }
+
+  String _parseColumnType(Column column) {
+    final suffix = column.length != null ? '(${column.length})' : '';
+    switch (column.type) {
+      case ColumnType.character:
+        return 'CHARACTER$suffix';
+      case ColumnType.varchar:
+        return 'VARCHAR$suffix';
+      case ColumnType.binary:
+        return 'BINARY$suffix';
+      case ColumnType.boolean:
+        return 'BOOLEAN$suffix';
+      case ColumnType.varbinary:
+        return 'VARBINARY$suffix';
+      case ColumnType.integer:
+        return 'INTEGER$suffix';
+      case ColumnType.smallint:
+        return 'SMALLINT$suffix';
+      case ColumnType.bigint:
+        return 'BIGINT$suffix';
+      case ColumnType.decimal:
+        return 'DECIMAL$suffix';
+      case ColumnType.numeric:
+        return 'NUMERIC$suffix';
+      case ColumnType.float:
+        return 'FLOAT$suffix';
+      case ColumnType.real:
+        return 'REAL$suffix';
+      case ColumnType.double:
+        return 'DOUBLE$suffix';
+      case ColumnType.date:
+        return 'DATE$suffix';
+      case ColumnType.time:
+        return 'TIME$suffix';
+      case ColumnType.timestamp:
+        return 'TIMESTAMP$suffix';
+      case ColumnType.interval:
+        return 'INTERVAL$suffix';
+      case ColumnType.array:
+        return 'ARRAY$suffix';
+      case ColumnType.multiset:
+        return 'MULTISET$suffix';
+      case ColumnType.xml:
+        return 'XML$suffix';
+    }
+  }
+
+  String _parseColumnConstraints(Column column) {
+    final constraints = [];
+    if (column.isPrimaryKey)
+      constraints.add('PRIMARY KEY');
+    if (column.shouldIncrement)
+      constraints.add(autoIncrementKeyword);
+    if (!column.isNullable)
+      constraints.add('NOT NULL');
+    return constraints.join(' ');
   }
 }
 

@@ -1,7 +1,20 @@
 part of trestle.gateway;
 
-abstract class ForeignKey {
-  ForeignKey onDelete(String response);
+class ForeignKey {
+  final String references;
+  final String column;
+  String onDeleteResponse;
+  String onUpdateResponse;
 
-  ForeignKey onUpdate(String response);
+  ForeignKey(String this.references, String this.column);
+
+  ForeignKey onDelete(String response) {
+    onDeleteResponse = response;
+    return this;
+  }
+
+  ForeignKey onUpdate(String response) {
+    onUpdateResponse = response;
+    return this;
+  }
 }

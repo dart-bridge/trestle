@@ -1,15 +1,12 @@
 part of trestle.gateway;
 
 class Schema {
-  final Driver _driver;
-  final List<Column> _columnsToAdd = [];
-  final List<String> _columnsToDrop = [];
-
-  Schema(Driver this._driver);
+  final List<Column> columns = [];
+  final List<String> columnsToDrop = [];
 
   Column _column(ColumnType type, String name, [core.int length]) {
     final column = new Column(name, type, length);
-    _columnsToAdd.add(column);
+    columns.add(column);
     return column;
   }
 
@@ -86,7 +83,7 @@ class Schema {
   // Other operation
 
   void drop(String name) {
-    _columnsToDrop.add(name);
+    columnsToDrop.add(name);
   }
 
   void delete(String name) => drop(name);

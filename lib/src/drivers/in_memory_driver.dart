@@ -183,6 +183,17 @@ class InMemoryDriver implements Driver {
   }
 
   String toString() => 'InMemoryDriver()';
+
+  Future alterTable(String name, Schema schema) async {
+
+  }
+
+  Future createTable(String name, Schema schema) async {
+  }
+
+  Future dropTable(String name) async {
+    _tables.remove(name);
+  }
 }
 
 class _AccessibleMap {

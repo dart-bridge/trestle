@@ -27,18 +27,33 @@ class Column {
   final String name;
   final ColumnType type;
   final int length;
+  bool isNullable = true;
+  ForeignKey foreignKey;
+  bool isPrimaryKey = false;
+  bool shouldIncrement = false;
 
   Column(String this.name, ColumnType this.type, int this.length);
 
   Column nullable(bool canBeNull) {
-    throw new UnsupportedError('To be implemented');
+    isNullable = canBeNull;
+    return this;
   }
 
   ForeignKey references(String foreignTable, {String column: 'id'}) {
-    throw new UnsupportedError('To be implemented');
+    return foreignKey = new ForeignKey(foreignTable, column);
+  }
+
+  Column primaryKey() {
+    isPrimaryKey = true;
+    return this;
+  }
+
+  Column increments() {
+    shouldIncrement = true;
+    return this;
   }
 
   Column incrementingPrimaryKey() {
-    throw new UnsupportedError('To be implemented');
+    return nullable(false).primaryKey().increments();
   }
 }

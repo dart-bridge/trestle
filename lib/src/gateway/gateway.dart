@@ -41,16 +41,22 @@ class Gateway {
   Query table(String name) =>
       new Query(driver, name);
 
-  Future create(String name, Future blueprint(Schema schema)) {
-    throw new UnsupportedError('To be implemented');
+  Future create(String name, Future blueprint(Schema schema)) async {
+    return driver.createTable(name, await _runBlueprint(blueprint));
   }
 
-  Future alter(String name, Future blueprint(Schema schema)) {
-    throw new UnsupportedError('To be implemented');
+  Future alter(String name, Future blueprint(Schema schema)) async {
+    return driver.alterTable(name, await _runBlueprint(blueprint));
+  }
+
+  Future<Schema> _runBlueprint(Future blueprint(Schema schema)) async {
+    final schema = new Schema();
+    await blueprint(schema);
+    return schema;
   }
 
   Future drop(String name) {
-    throw new UnsupportedError('To be implemented');
+    return driver.dropTable(name);
   }
 
   Future migrate(Map<String, Type> migrations) {

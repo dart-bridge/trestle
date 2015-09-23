@@ -21,7 +21,8 @@ main() {
   expectQuery(String query, [List variables = const []]) {
     expect(driver.queries, contains(query));
     if (variables.isNotEmpty)
-      expect(driver.variableSets.any((e) => equals(variables).matches(e, {})), isTrue, reason: '$variables was not passed');
+      expect(driver.variableSets.any((e) => equals(variables).matches(e, {})),
+          isTrue, reason: '$variables was not passed');
   }
 
   group('select statements', () {
@@ -52,11 +53,11 @@ main() {
       expectQuery('SELECT * FROM "test" WHERE "f" = ?;', ['value']);
 
       await query((q) => q.where(
-              (r) => r.x > 20 && (r.y >= 10 || r.z <= "string value")
+          (r) => r.x > 20 && (r.y >= 10 || r.z <= "string value")
       ).get());
       expectQuery('SELECT * FROM "test" WHERE '
-      '"x" > 20 AND ("y" >= 10 OR "z" <= ?)'
-      ';', ['string value']);
+          '"x" > 20 AND ("y" >= 10 OR "z" <= ?)'
+          ';', ['string value']);
     });
 
     test('limit', () async {
@@ -75,7 +76,7 @@ main() {
     });
 
     test('join', () async {
-      await query((q) => q.join('other', (a,b) => a.x == b.y).get());
+      await query((q) => q.join('other', (a, b) => a.x == b.y).get());
       expectQuery('SELECT * FROM "test" JOIN "other" ON test.x = other.y;');
     });
 
@@ -91,18 +92,18 @@ main() {
 
     test('integration', () async {
       await gateway.table('users')
-      .where((user) => user.age > 20 && user.first_name == 'John')
-      .sortBy('first_name')
-      .limit(1)
-      .join('addresses', (user, address) => user.address_id == address.id)
-      .get(['address','first_name','last_name']).toList();
+          .where((user) => user.age > 20 && user.first_name == 'John')
+          .sortBy('first_name')
+          .limit(1)
+          .join('addresses', (user, address) => user.address_id == address.id)
+          .get(['address', 'first_name', 'last_name']).toList();
 
       expectQuery(
           'SELECT "address", "first_name", "last_name" FROM "users" '
-          'WHERE "age" > 20 AND "first_name" = ? '
-          'SORT BY "first_name" ASC '
-          'LIMIT 1 '
-          'JOIN "addresses" ON users.address_id = addresses.id;',
+              'WHERE "age" > 20 AND "first_name" = ? '
+              'SORT BY "first_name" ASC '
+              'LIMIT 1 '
+              'JOIN "addresses" ON users.address_id = addresses.id;',
           ['John']
       );
     });
@@ -177,7 +178,8 @@ main() {
   });
 
   test('update statements', () async {
-    await query((q) => q.where((f) => f.x == '1').update({'f': '2', 'f2': '3'}));
+    await query((q) =>
+        q.where((f) => f.x == '1').update({'f': '2', 'f2': '3'}));
     expectQuery('UPDATE "test" '
         'SET "f" = ?, "f2" = ? '
         'WHERE "x" = ?;', ['2', '3', '1']);
@@ -192,12 +194,65 @@ main() {
     await query((q) => q.limit(3).decrement('f', 7));
     expectQuery('UPDATE "test" SET "f" = "f" - 7 LIMIT 3;');
   });
+
+  group('schema', () {
+    test('dropping a table', () async {
+      await gateway.drop('t');
+      expectQuery('DROP TABLE "t";');
+    });
+
+    group('creating a table', () {
+      test('with no fields', () async {
+        await gateway.create('t', (Schema schema) {});
+        expectQuery('CREATE TABLE "t" ();');
+      });
+
+      test('with a single field', () async {
+        await gateway.create('t', (Schema schema) {
+          schema.string('f');
+        });
+        expectQuery('CREATE TABLE "t" ("f" VARCHAR(255));');
+      });
+
+      test('with multiple fields and field properties', () async {
+        await gateway.create('t', (Schema schema) {
+          schema.id();
+          schema.integer('i').nullable(false);
+          schema.string('f');
+        });
+        expectQuery('CREATE TABLE "t" ('
+            '"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
+            '"i" INTEGER NOT NULL, '
+            '"f" VARCHAR(255)'
+            ');');
+      });
+    });
+
+    group('altering a table', () {
+      test('dropping columns', () async {
+        await gateway.alter('t', (Schema schema) {
+          schema.drop('f');
+          schema.drop('f2');
+        });
+        expectQuery('ALTER TABLE "t" DROP COLUMN "f", "f2";');
+      });
+
+      test('modifying', () async {
+        await gateway.alter('t', (Schema schema) {
+          schema.int('i');
+        });
+        expectQuery('ALTER TABLE "t" ADD COLUMN "i" INTEGER;');
+      });
+    });
+  });
 }
 
 class MockSqlDriver extends SqlDriver with SqlStandards {
   final List<String> queries = [];
   final List<List> variableSets = [];
   var willReturn = [];
+
+  String get autoIncrementKeyword => 'AUTOINCREMENT';
 
   Future connect() async {}
 

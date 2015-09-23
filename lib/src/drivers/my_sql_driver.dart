@@ -31,6 +31,8 @@ class MySqlDriver extends SqlDriver {
             maxPacketSize: maxPacketSize,
             useSSL: ssl);
 
+  String get autoIncrementKeyword => 'AUTO_INCREMENT';
+
   Future connect() async {
     await _connection.getConnection();
   }
@@ -40,6 +42,7 @@ class MySqlDriver extends SqlDriver {
   }
 
   Stream<Map<String, dynamic>> execute(String query, List variables) async* {
+    if (variables == null) variables = [];
     final sqljocky.Query preparedQuery = await _connection.prepare(query);
     final sqljocky.Results results = await preparedQuery.execute(variables);
     Iterable<String> fieldNames = results.fields.map((f) => f.name);

@@ -18,6 +18,15 @@ class PostgresqlDriver extends SqlDriver with SqlStandards {
     _connection = await postgresql.connect(_uri);
   }
 
+  String get autoIncrementKeyword => null;
+
+  @override
+  String parseSchemaColumn(Column column) {
+    if (column.isPrimaryKey && column.shouldIncrement)
+      return '${wrapSystemIdentifier(column.name)} SERIAL PRIMARY KEY';
+    return super.parseSchemaColumn(column);
+  }
+
   Future disconnect() async {
     _connection.close();
   }

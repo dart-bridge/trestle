@@ -28,4 +28,10 @@ abstract class Driver {
   Future increment(Query query, String field, int amount);
 
   Future decrement(Query query, String field, int amount);
+
+  Future createTable(String name, Schema schema);
+
+  Future alterTable(String name, Schema schema);
+
+  Future dropTable(String name);
 }

@@ -8,6 +8,8 @@ class SqliteDriver extends SqlDriver with SqlStandards {
         _file = file,
         _connection = new sqlite.Sqlite3Connection(file);
 
+  String get autoIncrementKeyword => 'AUTOINCREMENT';
+
   Future connect() {
     return _connection.open();
   }
