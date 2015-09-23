@@ -287,7 +287,7 @@ class _ConstraintParser {
   }
 
   String _sortByConstraint() {
-    return 'SORT BY ${_driver.wrapSystemIdentifier(
+    return 'ORDER BY ${_driver.wrapSystemIdentifier(
         (_constraint as SortByConstraint).field)} '
         '${(_constraint as SortByConstraint).direction ==
         SortByConstraint.descending ? 'DESC' : 'ASC'}';

@@ -82,7 +82,7 @@ main() {
 
     test('sort by', () async {
       await query((q) => q.sortBy('x', 'desc').get());
-      expectQuery('SELECT * FROM "test" SORT BY "x" DESC;');
+      expectQuery('SELECT * FROM "test" ORDER BY "x" DESC;');
     });
 
     test('group by', () async {
@@ -101,7 +101,7 @@ main() {
       expectQuery(
           'SELECT "address", "first_name", "last_name" FROM "users" '
               'WHERE "age" > 20 AND "first_name" = ? '
-              'SORT BY "first_name" ASC '
+              'ORDER BY "first_name" ASC '
               'LIMIT 1 '
               'JOIN "addresses" ON users.address_id = addresses.id;',
           ['John']
