@@ -2,7 +2,6 @@ import 'package:test/test.dart';
 import 'package:trestle/gateway.dart';
 import 'dart:async';
 import '../drivers/sql_driver_test.dart';
-import 'dart:collection';
 
 main() {
   MockSqlDriver driver;
@@ -95,11 +94,11 @@ class FirstMigration extends Migration {
   static bool wasRun = false;
   static bool wasRolledBack = false;
 
-  Future run(Gateway gateway) {
+  Future run(Gateway gateway) async {
     wasRun = true;
   }
 
-  Future rollback(Gateway gateway) {
+  Future rollback(Gateway gateway) async {
     wasRolledBack = true;
   }
 }
@@ -108,11 +107,11 @@ class SecondMigration extends Migration {
   static bool wasRun = false;
   static bool wasRolledBack = false;
 
-  Future run(Gateway gateway) {
+  Future run(Gateway gateway) async {
     wasRun = true;
   }
 
-  Future rollback(Gateway gateway) {
+  Future rollback(Gateway gateway) async {
     wasRolledBack = true;
   }
 }
@@ -121,11 +120,11 @@ class ThirdMigration extends Migration {
   static bool wasRun = false;
   static bool wasRolledBack = false;
 
-  Future run(Gateway gateway) {
+  Future run(Gateway gateway) async {
     wasRun = true;
   }
 
-  Future rollback(Gateway gateway) {
+  Future rollback(Gateway gateway) async {
     wasRolledBack = true;
   }
 }
@@ -134,11 +133,11 @@ class FourthMigration extends Migration {
   static bool wasRun = false;
   static bool wasRolledBack = false;
 
-  Future run(Gateway gateway) {
+  Future run(Gateway gateway) async {
     wasRun = true;
   }
 
-  Future rollback(Gateway gateway) {
+  Future rollback(Gateway gateway) async {
     wasRolledBack = true;
   }
 }

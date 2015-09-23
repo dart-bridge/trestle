@@ -4,13 +4,13 @@ import 'dart:async';
 
 final driver = new SqliteDriver(':memory:');
 
-main() => session(driver, (Gateway gateway) async {
-  final migrations = [
-    CreateUsersTableMigration,
-    RemoveNickNameColumnFromUsersTableMigration,
-    CreateAddressesTableMigration,
-  ].toSet();
+final migrations = [
+  CreateUsersTableMigration,
+  RemoveNickNameColumnFromUsersTableMigration,
+  CreateAddressesTableMigration,
+].toSet();
 
+main() => session(driver, (Gateway gateway) async {
   gateway.migrate(migrations);
   gateway.rollback(migrations);
 });

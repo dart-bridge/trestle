@@ -80,6 +80,11 @@ class Schema {
 
   Column id() => integer('id').incrementingPrimaryKey();
 
+  void timestamps() {
+    timestamp('created_at').nullable(false);
+    timestamp('updated_at').nullable(false);
+  }
+
   // Other operation
 
   void drop(String name) {
