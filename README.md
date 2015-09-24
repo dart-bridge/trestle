@@ -2,6 +2,8 @@
 
 _Database gateway and ORM for Dart_
 
+[![Build Status](https://travis-ci.org/dart-bridge/trestle.svg)](https://travis-ci.org/dart-bridge/trestle)
+
 ---
 
 * [Abstract](#abstract)
@@ -23,7 +25,7 @@ Trestle is the database package used in [Bridge](https://github.com/dart-bridge)
 clean API in mind. Providing a unified interface to work with different databases across multiple setups for maximum
 reusability and agility.
 
-The package is divided into two parts – the _Gateway_ and the _ORM_. The Gateway is the common abstraction that the 
+The package is divided into two parts – the _Gateway_ and the _ORM_. The Gateway is the common abstraction that the
 different database drivers implement, and the ORM uses the Gateway to talk to the database.
 
 The Gateway has both a _Schema Builder_ and a _Query Builder_, accessible from the common _Gateway_ class.
@@ -48,15 +50,15 @@ import 'package:trestle/gateway.dart';
 main() async {
   // The database implementation
   Driver driver = new InMemoryDriver();
-  
+
   // The gateway takes the driver as a constructor argument
   Gateway gateway = new Gateway(driver);
-  
+
   // Next, connect!
   await gateway.connect();
-  
+
   // ... Do some work
-  
+
   // Disconnect when you're done
   await gateway.disconnect();
 }
@@ -172,7 +174,7 @@ class CreateUsersTable extends Migration {
       // ...
     });
   }
-  
+
   Future rollback(Gateway gateway) {
     gateway.drop('users');
   }
@@ -181,7 +183,7 @@ class CreateUsersTable extends Migration {
 final migrations = [
   CreateUsersTable,
   // more migrations
-  CreateAddressesTable, 
+  CreateAddressesTable,
   DropUsernameColumnInUsersTable,
 ].toSet();
 
