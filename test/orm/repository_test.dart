@@ -110,19 +110,33 @@ main() {
       expect(repo.table, equals('overriden'));
     });
 
+    test('can delete rows', () async {
+      await table(repo.table, [
+        {'id': 1, 'a': 1, 'b': 2, 'c': 3},
+      ]);
+
+      final thing = await repo.find(1);
+
+      await repo.delete(thing);
+
+      expect(await repo.all().toList(), isEmpty);
+    });
+
     group('relationships', () {
       test('one to many', () async {
         await table(repo.table, [
-          {'id': 1,'a': 1, 'b': 2, 'c': 3},
+          {'id': 1, 'a': 1, 'b': 2, 'c': 3},
         ]);
         await table('belongings', [
-          {'id': 1,'d': 1, 'overriden_id': 1},
-          {'id': 2,'d': 2, 'overriden_id': 1},
-          {'id': 3,'d': 3, 'overriden_id': 2},
+          {'id': 1, 'd': 1, 'overriden_id': 1},
+          {'id': 2, 'd': 2, 'overriden_id': 1},
+          {'id': 3, 'd': 3, 'overriden_id': 2},
         ]);
 
         final thing = await repo.find(1);
-        final belongingsOfThing = await things.belongingsOf(thing).get().toList();
+        final belongingsOfThing = await things.belongingsOf(thing)
+            .get()
+            .toList();
         final belonging = belongingsOfThing[0];
         final thingCopy = await belongings.thingOf(belonging);
 
@@ -172,11 +186,11 @@ main() {
 
     test('only persists annotated fields', () async {
       final model = new ThingModel()
-          ..id = 1
-          ..a = 1
-          ..b = 2
-          ..c = 3
-          ..willNotBePersisted = 'x';
+        ..id = 1
+        ..a = 1
+        ..b = 2
+        ..c = 3
+        ..willNotBePersisted = 'x';
 
       await repo.add(model);
 
@@ -198,9 +212,10 @@ main() {
 
       await repo.update(retrieved);
 
-      expect(await gateway.table('thing_models').get(['created_at']).toList(), equals([
-        {'created_at': new DateTime(2016)}
-      ]));
+      expect(await gateway.table('thing_models').get(['created_at']).toList(),
+          equals([
+            {'created_at': new DateTime(2016)}
+          ]));
     });
   });
 }
@@ -240,7 +255,8 @@ class ThingRepository extends Repository<Thing> {
 
 class BelongingRepository extends Repository<Belonging> {
   Future<Thing> thingOf(Belonging belonging) {
-    return relationship(belonging).belongsTo(Thing, field: 'overriden_id', table: 'overriden');
+    return relationship(belonging).belongsTo(
+        Thing, field: 'overriden_id', table: 'overriden');
   }
 }
 

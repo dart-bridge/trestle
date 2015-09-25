@@ -66,6 +66,16 @@ class Repository<M> {
     return _query().update(model);
   }
 
+  Future delete(M model) async {
+    try {
+      final id = (model as dynamic).id;
+      return _query()._find(id).delete();
+    } on NoSuchMethodError {
+      throw new ArgumentError.value(
+          model, 'model', 'Model must have a getter [id] to be updated.');
+    }
+  }
+
   Relationship<M> relationship(M model) {
     return new Relationship<M>(this, _gateway, model);
   }
