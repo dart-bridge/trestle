@@ -1,4 +1,4 @@
-part of trestle.orm;
+part of trestle.model;
 
 class Field {
   final String columnName;

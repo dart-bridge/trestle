@@ -11,6 +11,6 @@ import 'dart:async';
 import 'dart:mirrors';
 
 import '../gateway/gateway.dart';
+import '../../model.dart';
 
 part 'repository.dart';
-part 'model.dart';

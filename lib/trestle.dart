@@ -3,3 +3,4 @@
 library trestle;
 
 export 'src/orm/orm.dart';
+export 'model.dart';
