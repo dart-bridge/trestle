@@ -227,9 +227,6 @@ class RepositoryQuery<M> {
             .getField(f)
             .reflectee)
     );
-    for (final key in map.keys.toList())
-      if (map[key] == null)
-        map.remove(key);
     return map;
   }
 
