@@ -43,12 +43,21 @@ abstract class SqlDriver implements Driver {
     return _aggregate('SUM', wrapSystemIdentifier(field), 'sum', query);
   }
 
-  String _addQuery(List variables, Query query, Map<String, dynamic> row) {
+  String _addQuery(List variables, Query query, Map<String, dynamic> rawRow) {
+    final row = _removeNulls(rawRow);
     final header = 'INSERT INTO ${wrapSystemIdentifier(query.table)}';
     final fields = row.keys.map(wrapSystemIdentifier);
     final values = ('?' * row.length).split('');
     variables.addAll(row.values);
     return '$header (${fields.join(', ')}) VALUES (${values.join(', ')});';
+  }
+
+  Map<String, dynamic> _removeNulls(Map<String, dynamic> row) {
+    final newRow = new Map.from(row);
+    for(final field in newRow.keys.toList())
+        if (newRow[field] == null)
+          newRow.remove(field);
+    return newRow;
   }
 
   Future add(Query query, Map<String, dynamic> row) {
