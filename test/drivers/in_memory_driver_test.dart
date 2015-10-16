@@ -151,5 +151,20 @@ main() {
             {'id': 3, 'x': 'c', 'second_id': 1, 'y': 'a'},
           ]);
     });
+
+    test('it assumes an id field is an auto incrementing integer', () async {
+      await gateway.table('ids').addAll([
+        {'id': null, 'x': 1},
+        {'id': null, 'x': 2},
+        {'id': null, 'x': 3},
+      ]);
+      await assertQuery(
+          gateway.table('ids'),
+          [
+            {'id': 1, 'x': 1},
+            {'id': 2, 'x': 2},
+            {'id': 3, 'x': 3},
+          ]);
+    });
   });
 }

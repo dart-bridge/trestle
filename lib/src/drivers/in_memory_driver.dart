@@ -2,19 +2,20 @@ part of trestle.drivers;
 
 class InMemoryDriver implements Driver {
   final Map<String, List<Map<String, dynamic>>> _tables = {};
+  final Map<String, int> _incrementingIds = {};
 
   List<Map<String, dynamic>> _table(String name) {
-    if (!_tables.containsKey(name))
-      _tables[name] = [];
-    return _tables[name];
+    _incrementingIds[name] ??= 0;
+    return _tables[name] ??= [];
   }
 
   Future add(Query query, Map<String, dynamic> row) async {
-    _table(query.table).add(row);
+    _table(query.table).add(_autoIncrementId(query.table, row));
   }
 
   Future addAll(Query query, Iterable<Map<String, dynamic>> rows) async {
-    _table(query.table).addAll(rows);
+    _table(query.table).addAll(rows.map((r)
+    => _autoIncrementId(query.table, r)));
   }
 
   Future<Iterable<int>> _list(Query query, String field) async {
@@ -193,6 +194,12 @@ class InMemoryDriver implements Driver {
 
   Future dropTable(String name) async {
     _tables.remove(name);
+  }
+
+  Map _autoIncrementId(String table, Map row) {
+    if (!row.containsKey('id')) return row;
+    row['id'] ??= ++_incrementingIds[table];
+    return row;
   }
 }
 
