@@ -8,7 +8,7 @@ main() => session(driver, (Gateway gateway) async {
   final repo = new Repository<User>()
     ..connect(gateway);
 
-  repo.addAll([
+  repo.saveAll([
     new User.create('Jane', 'Doe', 36),
     new User.create('John', 'Doe', 35),
   ]);
