@@ -29,17 +29,57 @@ main() {
     expect(await gateway.table(table).get().toList(), equals(rows));
   }
 
-  test('it has a collection of items', () async {
-    await seed('empties', [
-      {},
-    ]);
+  Future expectModelTable(String table, List<Map<String, dynamic>> rows) async {
+    expect(await gateway.table(table)
+        .get().map((m) {
+      m.remove('created_at');
+      m.remove('updated_at');
+      return m;
+    }).toList(), equals(rows));
+  }
 
-    await dataRepo(Empty).save(new Empty());
+  group('inserts', () {
+    test('it has a collection of items', () async {
+      await seed('empties', [
+        {},
+      ]);
 
-    await expectTable('empties', [
-      {}, {}
-    ]);
+      await dataRepo(Empty).save(new Empty());
+
+      await expectTable('empties', [
+        {}, {}
+      ]);
+    });
+
+    test('is supports data structures with fields', () async {
+      await seed('single_properties', [
+        {'property': 'a'},
+      ]);
+
+      await dataRepo(SingleProperty).save(
+          new SingleProperty()
+            ..property = 'b');
+
+      await expectTable('single_properties', [
+        {'property': 'a'},
+        {'property': 'b'},
+      ]);
+    });
+
+    test('is supports models with fields', () async {
+      await dataRepo(SimpleModel).save(new SimpleModel());
+
+      await expectModelTable('simple_models', [
+        {'id': 1},
+      ]);
+    });
   });
 }
 
 class Empty {}
+
+class SingleProperty {
+  String property;
+}
+
+class SimpleModel extends Model {}

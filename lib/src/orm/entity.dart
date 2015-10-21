@@ -1,7 +1,7 @@
 part of trestle.orm;
 
 abstract class Entity<M> {
-  final String table;
+  String get table;
 
   M deserialize(Map<String, dynamic> fields);
 
@@ -113,5 +113,8 @@ class DataStructureEntity<M> extends BaseEntity<M> {
     return new Map<String, Symbol>.fromIterables(fields, symbols);
   }
 
-  find(Query query, M model);
+  find(Query query, M model) {
+    throw new UnsupportedError(
+        '[$M] is not a Model. Only models can be updated.');
+  }
 }
