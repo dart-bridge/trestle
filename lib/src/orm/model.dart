@@ -1,12 +1,6 @@
-part of trestle.orm;
+library trestle.orm.model;
 
-class Field {
-  final String field;
-
-  const Field([this.field]);
-}
-
-const field = const Field();
+part 'annotations.dart';
 
 abstract class Model {
   @field int id;

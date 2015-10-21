@@ -1,11 +1,13 @@
 import 'package:test/test.dart';
 import 'package:trestle/trestle.dart';
 import 'package:trestle/gateway.dart';
+import 'models.dart';
 import 'dart:mirrors';
 import 'dart:async';
 
 main() {
   Gateway gateway;
+  Repository repo;
 
   setUp(() {
     gateway = new Gateway(new InMemoryDriver());
@@ -25,61 +27,81 @@ main() {
     return gateway.table(table).addAll(rows);
   }
 
-  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
-    expect(await gateway.table(table).get().toList(), equals(rows));
-  }
+//  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
+//    expect(await gateway.table(table).get().toList(), equals(rows));
+//  }
+//
+//  Future expectModelTable(String table, List<Map<String, dynamic>> rows) async {
+//    expect(await gateway.table(table)
+//        .get().map((m) {
+//      m.remove('created_at');
+//      m.remove('updated_at');
+//      return m;
+//    }).toList(), equals(rows));
+//  }
 
-  Future expectModelTable(String table, List<Map<String, dynamic>> rows) async {
-    expect(await gateway.table(table)
-        .get().map((m) {
-      m.remove('created_at');
-      m.remove('updated_at');
-      return m;
-    }).toList(), equals(rows));
-  }
-
-  group('inserts', () {
-    test('it has a collection of items', () async {
-      await seed('empties', [
-        {},
-      ]);
-
-      await dataRepo(Empty).save(new Empty());
-
-      await expectTable('empties', [
-        {}, {}
-      ]);
+  group('with a data structure', () {
+    setUp(() {
+      repo = dataRepo(DataStructure);
     });
 
-    test('is supports data structures with fields', () async {
-      await seed('single_properties', [
-        {'property': 'a'},
-      ]);
-
-      await dataRepo(SingleProperty).save(
-          new SingleProperty()
-            ..property = 'b');
-
-      await expectTable('single_properties', [
-        {'property': 'a'},
-        {'property': 'b'},
-      ]);
+    test('properties are mapped correctly', () async {
+      final struct = new DataStructure()
+        ..property = 'a'
+        ..camelCase = 'b';
+      await repo.save(struct);
+      struct.expectTable(repo.table);
+      struct.expectContent(await gateway.table('data_structures').first());
     });
-
-    test('is supports models with fields', () async {
-      await dataRepo(SimpleModel).save(new SimpleModel());
-
-      await expectModelTable('simple_models', [
-        {'id': 1},
-      ]);
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(SimpleModel);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ModelWithOverriddenTableName);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalOneToOneParent);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalOneToOneChild);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalOneToManyParent);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalOneToManyChild);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalManyToOneParent);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalManyToOneChild);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalManyToManyParent);
+    });
+  });
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(ConventionalManyToManyChild);
     });
   });
 }
-
-class Empty {}
-
-class SingleProperty {
-  String property;
-}
-
-class SimpleModel extends Model {}
