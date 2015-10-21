@@ -6,28 +6,28 @@ class Field {
   const Field([this.field]);
 }
 
-class _RelationshipAnnotation {
+class RelationshipAnnotation {
   final String mine;
   final String theirs;
   final String table;
 
-  const _RelationshipAnnotation(this.mine, this.theirs, this.table);
+  const RelationshipAnnotation(this.mine, this.theirs, this.table);
 }
 
-class _ManyToManyRelationshipAnnotation extends _RelationshipAnnotation {
+class _ManyToManyRelationshipAnnotation extends RelationshipAnnotation {
   final bool pivot;
 
-  _ManyToManyRelationshipAnnotation(
+  const _ManyToManyRelationshipAnnotation(
       this.pivot, String mine, String theirs, String table)
       : super(mine, theirs, table);
 }
 
-class HasOne extends _RelationshipAnnotation {
+class HasOne extends RelationshipAnnotation {
   const HasOne({String mine, String theirs, String table})
       : super(mine, theirs, table);
 }
 
-class BelongsTo extends _RelationshipAnnotation {
+class BelongsTo extends RelationshipAnnotation {
   const BelongsTo({String mine, String theirs, String table})
       : super(mine, theirs, table);
 }

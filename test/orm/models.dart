@@ -47,7 +47,7 @@ ModelsExpectation expectedModels(List expected()) {
     List<Model> query = await all[2].get().toList();
     expectModels(eager, lazy);
     expectModels(eager, query);
-    expectModels(eager, expected);
+    expectModels(eager, models);
   };
 }
 
@@ -90,164 +90,202 @@ class ModelWithOverriddenTableName extends Model {
 // Relationships
 
 class ConventionalOneToOneParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
   @hasOne ConventionalOneToOneChild child;
   @hasOne Future<ConventionalOneToOneChild> lazyChild;
 
-  ModelExpectation get expectModel => expectedModel(() => [child, lazyChild]);
+  ModelExpectation get expectChild => expectedModel(() => [child, lazyChild]);
 }
 
 class ConventionalOneToOneChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
   @belongsTo ConventionalOneToOneParent parent;
   @belongsTo Future<ConventionalOneToOneParent> lazyParent;
 
-  ModelExpectation get expectModel => expectedModel(() => [parent, lazyParent]);
+  ModelExpectation get expectParent => expectedModel(() => [parent, lazyParent]);
 }
 
 class ConventionalOneToManyParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
   @hasMany List<ConventionalOneToManyChild> children;
   @hasMany Stream<ConventionalOneToManyChild> lazyChildren;
   @hasMany RepositoryQuery<ConventionalOneToManyChild> queryChildren;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectChildren =>
       expectedModels(() => [children, lazyChildren, queryChildren]);
 }
 
 class ConventionalOneToManyChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
   @belongsTo ConventionalOneToManyParent parent;
   @belongsTo Future<ConventionalOneToManyParent> lazyParent;
 
-  ModelExpectation get expectModel => expectedModel(() => [parent, lazyParent]);
+  ModelExpectation get expectParent => expectedModel(() => [parent, lazyParent]);
 }
 
 class ConventionalManyToOneParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
   @hasOne ConventionalManyToOneChild child;
   @hasOne Future<ConventionalManyToOneChild> lazyChild;
 
-  ModelExpectation get expectModel => expectedModel(() => [child, lazyChild]);
+  ModelExpectation get expectChild => expectedModel(() => [child, lazyChild]);
 }
 
 class ConventionalManyToOneChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
   @belongsToMany List<ConventionalManyToOneParent> parents;
   @belongsToMany Stream<ConventionalManyToOneParent> lazyParents;
   @belongsToMany RepositoryQuery<ConventionalManyToOneParent> queryParents;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectParents =>
       expectedModels(() => [parents, lazyParents, queryParents]);
 }
 
 class ConventionalManyToManyParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
   @hasMany List<ConventionalManyToManyChild> children;
   @hasMany Stream<ConventionalManyToManyChild> lazyChildren;
   @hasMany RepositoryQuery<ConventionalManyToManyChild> queryChildren;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectChildren =>
       expectedModels(() => [children, lazyChildren, queryChildren]);
 }
 
 class ConventionalManyToManyChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
   @belongsToMany List<ConventionalManyToManyParent> parents;
   @belongsToMany Stream<ConventionalManyToManyParent> lazyParents;
   @belongsToMany RepositoryQuery<ConventionalManyToManyParent> queryParents;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectParents =>
       expectedModels(() => [parents, lazyParents, queryParents]);
 }
 
 // Unconventional relationships
 
 class UnconventionalOneToOneParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
-  @hasOne UnconventionalOneToOneChild child;
-  @hasOne Future<UnconventionalOneToOneChild> lazyChild;
+  @HasOne(mine: 'child_id_x', theirs: 'id_x')
+  UnconventionalOneToOneChild child;
+  @HasOne(mine: 'child_id_x', theirs: 'id_x')
+  Future<UnconventionalOneToOneChild> lazyChild;
 
-  ModelExpectation get expectModel => expectedModel(() => [child, lazyChild]);
+  ModelExpectation get expectChild => expectedModel(() => [child, lazyChild]);
 }
 
 class UnconventionalOneToOneChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
-  @belongsTo UnconventionalOneToOneParent parent;
-  @belongsTo Future<UnconventionalOneToOneParent> lazyParent;
+  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  UnconventionalOneToOneParent parent;
+  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  Future<UnconventionalOneToOneParent> lazyParent;
 
-  ModelExpectation get expectModel => expectedModel(() => [parent, lazyParent]);
+  ModelExpectation get expectParent => expectedModel(() => [parent, lazyParent]);
 }
 
 class UnconventionalOneToManyParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
-  @hasMany List<UnconventionalOneToManyChild> children;
-  @hasMany Stream<UnconventionalOneToManyChild> lazyChildren;
-  @hasMany RepositoryQuery<UnconventionalOneToManyChild> queryChildren;
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  List<UnconventionalOneToManyChild> children;
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  Stream<UnconventionalOneToManyChild> lazyChildren;
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  RepositoryQuery<UnconventionalOneToManyChild> queryChildren;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectChildren =>
       expectedModels(() => [children, lazyChildren, queryChildren]);
 }
 
 class UnconventionalOneToManyChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
-  @belongsTo UnconventionalOneToManyParent parent;
-  @belongsTo Future<UnconventionalOneToManyParent> lazyParent;
+  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  UnconventionalOneToManyParent parent;
+  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  Future<UnconventionalOneToManyParent> lazyParent;
 
-  ModelExpectation get expectModel => expectedModel(() => [parent, lazyParent]);
+  ModelExpectation get expectParent => expectedModel(() => [parent, lazyParent]);
 }
 
 class UnconventionalManyToOneParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
-  @hasOne UnconventionalManyToOneChild child;
-  @hasOne Future<UnconventionalManyToOneChild> lazyChild;
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  UnconventionalManyToOneChild child;
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  Future<UnconventionalManyToOneChild> lazyChild;
 
-  ModelExpectation get expectModel => expectedModel(() => [child, lazyChild]);
+  ModelExpectation get expectChild => expectedModel(() => [child, lazyChild]);
 }
 
 class UnconventionalManyToOneChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
-  @belongsToMany List<UnconventionalManyToOneParent> parents;
-  @belongsToMany Stream<UnconventionalManyToOneParent> lazyParents;
-  @belongsToMany RepositoryQuery<UnconventionalManyToOneParent> queryParents;
+  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  List<UnconventionalManyToOneParent> parents;
+  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  Stream<UnconventionalManyToOneParent> lazyParents;
+  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  RepositoryQuery<UnconventionalManyToOneParent> queryParents;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectParents =>
       expectedModels(() => [parents, lazyParents, queryParents]);
 }
 
 class UnconventionalManyToManyParent extends Model {
-  static const table = 'parent';
+  static const table = 'parents';
 
-  @hasMany List<UnconventionalManyToManyChild> children;
-  @hasMany Stream<UnconventionalManyToManyChild> lazyChildren;
-  @hasMany RepositoryQuery<UnconventionalManyToManyChild> queryChildren;
+  @HasMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  List<UnconventionalManyToManyChild> children;
+  @HasMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  Stream<UnconventionalManyToManyChild> lazyChildren;
+  @HasMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  RepositoryQuery<UnconventionalManyToManyChild> queryChildren;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectChildren =>
       expectedModels(() => [children, lazyChildren, queryChildren]);
 }
 
 class UnconventionalManyToManyChild extends Model {
-  static const table = 'child';
+  static const table = 'children';
 
-  @belongsToMany List<UnconventionalManyToManyParent> parents;
-  @belongsToMany Stream<UnconventionalManyToManyParent> lazyParents;
-  @belongsToMany RepositoryQuery<UnconventionalManyToManyParent> queryParents;
+  @BelongsToMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  List<UnconventionalManyToManyParent> parents;
+  @BelongsToMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  Stream<UnconventionalManyToManyParent> lazyParents;
+  @BelongsToMany(mine: 'id_x',
+      theirs: 'parent_id_x',
+      table: 'parents_children_x',
+      pivot: true)
+  RepositoryQuery<UnconventionalManyToManyParent> queryParents;
 
-  ModelsExpectation get expectModels =>
+  ModelsExpectation get expectParents =>
       expectedModels(() => [parents, lazyParents, queryParents]);
 }
 

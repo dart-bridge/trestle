@@ -3,6 +3,7 @@ import 'package:trestle/trestle.dart';
 import 'package:trestle/gateway.dart';
 import 'models.dart';
 import 'dart:mirrors';
+import 'dart:async';
 
 main() {
   Gateway gateway;
@@ -22,9 +23,9 @@ main() {
       ..connect(gateway);
   }
 
-//  Future seed(String table, List<Map<String, dynamic>> rows) {
-//    return gateway.table(table).addAll(rows);
-//  }
+  Future seed(String table, List<Map<String, dynamic>> rows) {
+    return gateway.table(table).addAll(rows);
+  }
 
 //  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
 //    expect(await gateway.table(table).get().toList(), equals(rows));
@@ -81,51 +82,121 @@ main() {
     });
   });
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalOneToOneParent);
-    });
-  });
+  group('relationships', () {
+    Repository childRepo;
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalOneToOneChild);
-    });
-  });
+    group('one to one', () {
+      setUp(() {
+        repo = modelRepo(ConventionalOneToOneParent);
+        childRepo = modelRepo(ConventionalOneToOneChild);
+      });
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalOneToManyParent);
-    });
-  });
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 11, 'child_id': 22},
+        ]);
+        await seed('children', [
+          {'id': 22},
+        ]);
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalOneToManyChild);
-    });
-  });
+        // Read
+        final ConventionalOneToOneParent parent = await repo.find(11);
+        final ConventionalOneToOneChild child = await childRepo.find(22);
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalManyToOneParent);
-    });
-  });
+        // Assert
+        await parent.expectChild(child);
+        await child.expectParent(parent);
+      });
+    }, skip: 'not yet implemeted');
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalManyToOneChild);
-    });
-  });
+    group('one to many', () {
+      setUp(() {
+        repo = modelRepo(ConventionalOneToManyParent);
+        childRepo = modelRepo(ConventionalOneToManyChild);
+      });
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalManyToManyParent);
-    });
-  });
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 33}
+        ]);
+        await seed('children', [
+          {'id': 44, 'parent_id': 33},
+          {'id': 55, 'parent_id': 33},
+        ]);
 
-  group('with a simple model', () {
-    setUp(() {
-      repo = modelRepo(ConventionalManyToManyChild);
-    });
+        // Read
+        final ConventionalOneToManyParent parent = await repo.find(33);
+        final List<ConventionalOneToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await parent.expectChildren(children);
+        await Future.wait(children.map((c) => c.expectParent(parent)));
+      });
+    }, skip: 'not yet implemeted');
+
+    group('many to one', () {
+      setUp(() {
+        repo = modelRepo(ConventionalManyToOneParent);
+        childRepo = modelRepo(ConventionalManyToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 66, 'child_id': 88},
+          {'id': 77, 'child_id': 88},
+        ]);
+        await seed('children', [
+          {'id': 88}
+        ]);
+
+        // Read
+        final List<ConventionalManyToOneParent> parents =
+        await repo.all().toList();
+        final ConventionalManyToOneChild child = await childRepo.find(88);
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChild(child)));
+        await child.expectParents(parents);
+      });
+    }, skip: 'not yet implemeted');
+
+    group('one to many', () {
+      setUp(() {
+        repo = modelRepo(ConventionalManyToManyParent);
+        childRepo = modelRepo(ConventionalManyToManyChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 99},
+          {'id': 1010},
+        ]);
+        await seed('children', [
+          {'id': 1111},
+          {'id': 1212},
+        ]);
+        await seed('parents_children', [
+          {'parent_id': 99, 'child_id': 1111},
+          {'parent_id': 99, 'child_id': 1212},
+          {'parent_id': 1010, 'child_id': 1111},
+          {'parent_id': 1010, 'child_id': 1212},
+        ]);
+
+        // Read
+        final List<ConventionalManyToManyParent> parents =
+        await repo.all().toList();
+        final List<ConventionalManyToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChildren(children)));
+        await Future.wait(children.map((c) => c.expectParents(parents)));
+      });
+    }, skip: 'not yet implemeted');
   });
 }

@@ -48,6 +48,8 @@ class Repository<M> {
 
   Future clear() => _query.delete();
 
+  Future<M> find(int id) => _query.find(id).first().then(_entity.deserialize);
+
   Future<M> first() => _query.first().then(_entity.deserialize);
 
   Stream<M> all() => _query.get().map(_entity.deserialize);

@@ -28,6 +28,7 @@ String _pluralize(String singular) {
 
 abstract class BaseEntity<M> implements Entity<M> {
   String _table;
+
   String get table => _table;
   final ClassMirror _type;
   final List<M> _deserialized = [];
@@ -45,10 +46,11 @@ abstract class BaseEntity<M> implements Entity<M> {
   }
 
   M deserialize(Map<String, dynamic> fields) {
+    final fieldsWithRelationships = _deserializeRelationships(fields);
     final instance = _type.newInstance(const Symbol(''), []);
-    for (final field in fields.keys)
+    for (final field in fieldsWithRelationships.keys)
       if (_fields.containsKey(field))
-        instance.setField(_fields[field], fields[field]);
+        instance.setField(_fields[field], fieldsWithRelationships[field]);
     final model = instance.reflectee;
     _deserialized.add(model);
     return model;
@@ -60,13 +62,21 @@ abstract class BaseEntity<M> implements Entity<M> {
 
   Map<String, Symbol> _getFields();
 
+  Map<String, dynamic> _serializeRelationships(Map<String, dynamic> fields) {
+    return fields;
+  }
+
+  Map<String, dynamic> _deserializeRelationships(Map<String, dynamic> fields) {
+    return fields;
+  }
+
   Map<String, dynamic> serialize(M model) {
     final map = <String, dynamic>{};
     for (final field in _fields.keys)
       map[field] = reflect(model)
           .getField(_fields[field])
           .reflectee;
-    return map;
+    return _serializeRelationships(map);
   }
 
   bool isSaved(M model) => _deserialized.contains(model);
@@ -74,6 +84,12 @@ abstract class BaseEntity<M> implements Entity<M> {
 
 class ModelEntity<M extends Model> extends BaseEntity<M> {
   ModelEntity(TypeMirror type) : super(type);
+
+  Relationship<dynamic, M> relationshipWithParent(Type type) =>
+      new Relationship<dynamic, M>(parent: type, child: _type.reflectedType);
+
+  Relationship<M, dynamic> relationshipWithChild(Type type) =>
+      new Relationship<M, dynamic>(child: type, parent: _type.reflectedType);
 
   Map<String, Symbol> _getFields() {
     final members = _type.instanceMembers.keys;
@@ -105,7 +121,9 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   @override
   String _forceTableName(String table) {
     if (_type.declarations.containsKey(#table))
-      return _type.getField(#table).reflectee;
+      return _type
+          .getField(#table)
+          .reflectee;
     return table;
   }
 }
