@@ -1,6 +1,5 @@
 import 'package:test/test.dart';
 import 'package:trestle/trestle.dart';
-import 'package:trestle/gateway.dart';
 import 'dart:mirrors';
 
 main() {

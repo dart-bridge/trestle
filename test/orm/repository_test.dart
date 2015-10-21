@@ -3,7 +3,6 @@ import 'package:trestle/trestle.dart';
 import 'package:trestle/gateway.dart';
 import 'models.dart';
 import 'dart:mirrors';
-import 'dart:async';
 
 main() {
   Gateway gateway;
@@ -23,9 +22,9 @@ main() {
       ..connect(gateway);
   }
 
-  Future seed(String table, List<Map<String, dynamic>> rows) {
-    return gateway.table(table).addAll(rows);
-  }
+//  Future seed(String table, List<Map<String, dynamic>> rows) {
+//    return gateway.table(table).addAll(rows);
+//  }
 
 //  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
 //    expect(await gateway.table(table).get().toList(), equals(rows));
@@ -46,59 +45,84 @@ main() {
     });
 
     test('properties are mapped correctly', () async {
-      final struct = new DataStructure()
+      final model = new DataStructure()
         ..property = 'a'
         ..camelCase = 'b';
-      await repo.save(struct);
-      struct.expectTable(repo.table);
-      struct.expectContent(await gateway.table('data_structures').first());
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.expectContent(await gateway.table('data_structures').first());
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(SimpleModel);
     });
+
+    test('properties are mapped correctly', () async {
+      final model = new SimpleModel()
+        ..property = 'a'
+        ..camelCase = 'b';
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.id = 1;
+      model.expectContent(await gateway.table('simple_models').first());
+    });
   });
-  group('with a simple model', () {
+
+  group('with a model with overridden table name', () {
     setUp(() {
       repo = modelRepo(ModelWithOverriddenTableName);
     });
+
+    test('table name is overriden', () async {
+      final model = new ModelWithOverriddenTableName();
+      model.expectTable(repo.table);
+    });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalOneToOneParent);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalOneToOneChild);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalOneToManyParent);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalOneToManyChild);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalManyToOneParent);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalManyToOneChild);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalManyToManyParent);
     });
   });
+
   group('with a simple model', () {
     setUp(() {
       repo = modelRepo(ConventionalManyToManyChild);

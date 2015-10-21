@@ -27,22 +27,25 @@ String _pluralize(String singular) {
 }
 
 abstract class BaseEntity<M> implements Entity<M> {
-  final String table;
-  final TypeMirror _type;
+  String _table;
+  String get table => _table;
+  final ClassMirror _type;
   final List<M> _deserialized = [];
 
   BaseEntity(TypeMirror type)
-      :
-        _type = type,
-        table = _getTableName(type);
+      : _type = type {
+    _table = _getTableName(type);
+  }
 
-  static _getTableName(TypeMirror type) {
-    return _pluralize(_camelToSnakeCase(
-        MirrorSystem.getName(type.simpleName)));
+  String _forceTableName(String table) => table;
+
+  String _getTableName(TypeMirror type) {
+    return _forceTableName(_pluralize(_camelToSnakeCase(
+        MirrorSystem.getName(type.simpleName))));
   }
 
   M deserialize(Map<String, dynamic> fields) {
-    final instance = (_type as ClassMirror).newInstance(const Symbol(''), []);
+    final instance = _type.newInstance(const Symbol(''), []);
     for (final field in fields.keys)
       if (_fields.containsKey(field))
         instance.setField(_fields[field], fields[field]);
@@ -73,7 +76,7 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   ModelEntity(TypeMirror type) : super(type);
 
   Map<String, Symbol> _getFields() {
-    final members = (_type as ClassMirror).instanceMembers.keys;
+    final members = _type.instanceMembers.keys;
     final symbols = members.where((s) {
       final name = MirrorSystem.getName(s);
       return members.contains(new Symbol('$name=')) &&
@@ -98,13 +101,20 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   }
 
   find(Query query, M model) => query.where((other) => other.id == model.id);
+
+  @override
+  String _forceTableName(String table) {
+    if (_type.declarations.containsKey(#table))
+      return _type.getField(#table).reflectee;
+    return table;
+  }
 }
 
 class DataStructureEntity<M> extends BaseEntity<M> {
   DataStructureEntity(TypeMirror type) : super(type);
 
   Map<String, Symbol> _getFields() {
-    final members = (_type as ClassMirror).instanceMembers.keys;
+    final members = _type.instanceMembers.keys;
     final symbols = members.where((s) {
       final name = MirrorSystem.getName(s);
       return members.contains(new Symbol('$name='));
