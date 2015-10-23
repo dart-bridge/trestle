@@ -1,32 +1,22 @@
 part of trestle.orm;
 
 class Repository<M> {
-  Gateway __gateway;
+  final Gateway _gateway;
   final Entity<M> _entity;
 
-  Repository() : _entity = _makeEntity(M);
+  Repository(Gateway gateway)
+      : _gateway = gateway,
+        _entity = _makeEntity(gateway, M);
 
-  Repository.of(this._entity);
+  Repository.of(this._entity, this._gateway);
 
   get table => _entity.table;
 
-  static Entity _makeEntity(Type type) {
+  static Entity _makeEntity(Gateway gateway, Type type) {
     final mirror = reflectType(type);
     if (mirror.isAssignableTo(reflectType(Model)))
-      return new ModelEntity(mirror);
+      return new ModelEntity(gateway, mirror);
     return new DataStructureEntity(mirror);
-  }
-
-  void connect(Gateway gateway) {
-    __gateway = gateway;
-  }
-
-  Gateway get _gateway {
-    if (__gateway == null)
-      throw new StateError(
-          'Repository is not connected. '
-              'Connect a gateway before executing queries!');
-    return __gateway;
   }
 
   Query get _query => _gateway.table(_entity.table);

@@ -5,8 +5,7 @@ import 'session.dart';
 final driver = new SqliteDriver(':memory:');
 
 main() => session(driver, (Gateway gateway) async {
-  final repo = new Repository<User>()
-    ..connect(gateway);
+  final repo = new Repository<User>(gateway);
 
   repo.saveAll([
     new User.create('Jane', 'Doe', 36),

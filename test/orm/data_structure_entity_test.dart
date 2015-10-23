@@ -13,8 +13,8 @@ main() {
     expect(articleEntity.table, equals('articles'));
   });
 
-  test('it applies a map to fields', () {
-    final article = articleEntity.deserialize({'title': 'x'});
+  test('it applies a map to fields', () async {
+    final article = await articleEntity.deserialize({'title': 'x'});
     expect(article.title, equals('x'));
   });
 

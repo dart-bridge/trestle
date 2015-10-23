@@ -14,13 +14,14 @@ main() {
   });
 
   Repository modelRepo(Type model) {
-    return new Repository.of(new ModelEntity(reflectType(model)))
-      ..connect(gateway);
+    return new Repository.of(
+        new ModelEntity(gateway, reflectType(model)),
+        gateway);
   }
 
   Repository dataRepo(Type model) {
-    return new Repository.of(new DataStructureEntity(reflectType(model)))
-      ..connect(gateway);
+    return new Repository.of(
+        new DataStructureEntity(reflectType(model)), gateway);
   }
 
   Future seed(String table, List<Map<String, dynamic>> rows) {
@@ -94,7 +95,7 @@ main() {
       test('read', () async {
         // Seed
         await seed('parents', [
-          {'id': 11, 'child_id': 22},
+          {'id': 11, 'conventional_one_to_one_child_id': 22},
         ]);
         await seed('children', [
           {'id': 22},
@@ -108,7 +109,7 @@ main() {
         await parent.expectChild(child);
         await child.expectParent(parent);
       });
-    }, skip: 'not yet implemeted');
+    });
 
     group('one to many', () {
       setUp(() {

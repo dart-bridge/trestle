@@ -1,20 +1,23 @@
 import 'package:test/test.dart';
 import 'package:trestle/trestle.dart';
+import 'package:trestle/gateway.dart';
 import 'dart:mirrors';
 
 main() {
   Entity<Article> articleEntity;
 
   setUp(() {
-    articleEntity = new ModelEntity<Article>(reflectType(Article));
+    articleEntity = new ModelEntity<Article>(
+        new Gateway(new InMemoryDriver()),
+        reflectType(Article));
   });
 
   test('it uses the name of the model for choosing table name', () {
     expect(articleEntity.table, equals('articles'));
   });
 
-  test('it applies a map to fields', () {
-    final article = articleEntity.deserialize({'id': 1, 'title': 'x'});
+  test('it applies a map to fields', () async {
+    final article = await articleEntity.deserialize({'id': 1, 'title': 'x'});
     expect(article.id, equals(1));
     expect(article.title, equals('x'));
   });
