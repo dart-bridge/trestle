@@ -128,7 +128,7 @@ class _OneToOneRelationship<Parent extends Model, Child extends Model> {
         .where((parent) => parent[parentId] == child[childId])
         .first().catchError((_) => null);
     if (row == null) return null;
-    row.remove(parentId);
+    row[parentId] = null;
     return entity.deserialize(row);
   }
 
@@ -144,7 +144,7 @@ class _OneToOneRelationship<Parent extends Model, Child extends Model> {
         .where((child) => child[childId] == parent[parentId])
         .first().catchError((_) => null);
     if (row == null) return null;
-    parent.remove(parentId);
+    parent[parentId] = null;
     return entity.deserialize(row);
   }
 }
