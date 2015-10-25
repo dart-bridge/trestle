@@ -4,7 +4,7 @@ import 'package:trestle/gateway.dart';
 import 'dart:mirrors';
 
 main() {
-  Entity<Article> articleEntity;
+  MapsFieldsToModel<Article> articleEntity;
 
   setUp(() {
     articleEntity = new ModelEntity<Article>(

@@ -2,7 +2,7 @@ part of trestle.orm;
 
 class RepositoryQuery<M> {
   final Query _query;
-  final Entity<M> _entity;
+  final MapsFieldsToModel<M> _entity;
 
   RepositoryQuery(this._query, this._entity);
 

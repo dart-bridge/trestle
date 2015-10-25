@@ -1,6 +1,6 @@
 part of trestle.orm;
 
-abstract class Entity<M> {
+abstract class MapsFieldsToModel<M> {
   String get table;
 
   Future<M> deserialize(Map<String, dynamic> fields);
@@ -26,7 +26,7 @@ String _pluralize(String singular) {
       : '${singular}s';
 }
 
-abstract class BaseEntity<M> implements Entity<M> {
+abstract class BaseEntity<M> implements MapsFieldsToModel<M> {
   String _table;
 
   String get table => _table;
@@ -48,10 +48,9 @@ abstract class BaseEntity<M> implements Entity<M> {
   Future<M> deserialize(Map<String, dynamic> fields) async {
     final instance = _type.newInstance(const Symbol(''), []);
     final model = instance.reflectee;
-    final fieldsWithRelationships = await _deserializeRelationships(fields);
-    for (final field in fieldsWithRelationships.keys)
+    for (final field in fields.keys)
       if (_fields.containsKey(field))
-        instance.setField(_fields[field], fieldsWithRelationships[field]);
+        instance.setField(_fields[field], fields[field]);
     _deserialized.add(model);
     return model;
   }
@@ -62,21 +61,13 @@ abstract class BaseEntity<M> implements Entity<M> {
 
   Map<String, Symbol> _getFields();
 
-  Map<String, dynamic> _serializeRelationships(Map<String, dynamic> fields) {
-    return fields;
-  }
-
-  Future<Map<String, dynamic>> _deserializeRelationships(Map<String, dynamic> fields) async {
-    return fields;
-  }
-
   Map<String, dynamic> serialize(M model) {
     final map = <String, dynamic>{};
     for (final field in _fields.keys)
       map[field] = reflect(model)
           .getField(_fields[field])
           .reflectee;
-    return _serializeRelationships(map);
+    return map;
   }
 
   bool isSaved(M model) => _deserialized.contains(model);
@@ -90,11 +81,13 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   String get foreignKey =>
       _camelToSnakeCase(MirrorSystem.getName(_type.simpleName)) + '_id';
 
-  Relationship<dynamic, M> relationshipWithParent(Type type) =>
-      new Relationship<dynamic, M>(_gateway, parent: type, child: _type.reflectedType);
+  ParentChildRelationship<dynamic, M> relationshipWithParent(Type type) =>
+      new ParentChildRelationship<dynamic, M>(
+          _gateway, parent: type, child: _type.reflectedType);
 
-  Relationship<M, dynamic> relationshipWithChild(Type type) =>
-      new Relationship<M, dynamic>(_gateway, child: type, parent: _type.reflectedType);
+  ParentChildRelationship<M, dynamic> relationshipWithChild(Type type) =>
+      new ParentChildRelationship<M, dynamic>(
+          _gateway, child: type, parent: _type.reflectedType);
 
   Iterable<Symbol> _getGetterSetters(bool containsMetadata(InstanceMirror i)) {
     final members = _type.instanceMembers.keys;
@@ -123,6 +116,10 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
           _relationshipFieldSymbols()));
   }
 
+  Iterable<String> _relationshipFieldNames() {
+    return _relationshipFieldSymbols().map(MirrorSystem.getName);
+  }
+
   bool _isFieldAnnotation(InstanceMirror meta) {
     return meta.reflectee is Field;
   }
@@ -139,7 +136,20 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   }
 
   @override
-  Map<String, dynamic> _serializeRelationships(Map<String, dynamic> fields) {
+  Map<String, dynamic> serialize(M model) {
+    return super.serialize(model);
+  }
+
+  @override
+  Future<M> deserialize(Map<String, dynamic> fields,
+      {bool attachRelationships: true}) {
+    final model = super.deserialize(fields);
+    if (attachRelationships)
+      return model.then((m) => deserializeRelationships(m, fields));
+    return model;
+  }
+
+  Map<String, dynamic> serializeRelationships(Map<String, dynamic> fields) {
 //    final relationships = _getRelationships();
 //    print(relationships);
     return fields;
@@ -161,38 +171,35 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
     return meta.reflectee is RelationshipAnnotation;
   }
 
-  @override
-  Future<Map<String, dynamic>> _deserializeRelationships(Map<String, dynamic> fields) async {
-    return (await _getRelationships(fields))
-      ..addAll(fields);
+  Future<M> deserializeRelationships(M self, Map row) async {
+    final mirror = reflect(self);
+    final keys = _relationshipFieldSymbols()
+        .where((s) => mirror
+        .getField(s)
+        .reflectee == null);
+    final values = await _relationshipFieldValues(keys, self, row);
+    new Map.fromIterables(keys, values).forEach(mirror.setField);
+    return self;
   }
 
-  Future<Map<String, dynamic>> _getRelationships(Map<String, dynamic> self) async {
-    final keys = _relationshipFieldNames();
-    final values = await _relationshipFieldValues(self);
-
-    return new Map.fromIterables(keys, values);
-  }
-
-  Future<Iterable> _relationshipFieldValues(Map<String, dynamic> self) async {
-    return Future.wait(_relationshipDeclarations.map((m) =>
-        _assignRelationshipProperty(self, m)));
+  Future<Iterable> _relationshipFieldValues(Iterable<Symbol> symbols, M self,
+      Map row) async {
+    return Future.wait(_relationshipDeclarations
+        .where((m) => symbols.contains(m.simpleName))
+        .map((m) => _getRelationshipProperty(self, row, m)));
   }
 
   Iterable<Symbol> _relationshipFieldSymbols() {
     return _relationshipDeclarations.map((m) => m.simpleName);
   }
 
-  Iterable<String> _relationshipFieldNames() {
-    return _relationshipFieldSymbols().map(MirrorSystem.getName);
-  }
-
-  Future _assignRelationshipProperty(Map<String, dynamic> self, VariableMirror property) async {
+  Future _getRelationshipProperty(M self, Map row,
+      VariableMirror property) async {
     final returnType = property.type;
 
     // Model
     if (returnType.isAssignableTo(reflectType(Model)))
-      return _assignSingleRelationship(self, property);
+      return _assignSingleRelationship(self, row, property);
 
     // Future<M>
     if (returnType.isAssignableTo(reflectType(Future)))
@@ -213,17 +220,20 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
     throw new ArgumentError('$returnType is not a valid relationship type');
   }
 
-  Future<Model> _assignSingleRelationship(Map<String, dynamic> self, VariableMirror property) {
+  Future<Model> _assignSingleRelationship(M self, Map row,
+      VariableMirror property) {
     final annotation = _relationshipAnnotation(property);
     final relatedType = _relatedType(property.type);
     final isParent = annotation is HasOne || annotation is HasMany;
     final relationship = isParent
-        ? new Relationship(_gateway, parent: _type.reflectedType, child: relatedType)
-        : new Relationship(_gateway, child: _type.reflectedType, parent: relatedType);
+        ? new ParentChildRelationship(
+        _gateway, parent: _type.reflectedType, child: relatedType)
+        : new ParentChildRelationship(
+        _gateway, child: _type.reflectedType, parent: relatedType);
     if (annotation is HasOne)
-      return relationship.hasOne(self, annotation);
+      return relationship.hasOne(self, row, annotation);
     if (annotation is BelongsTo)
-      return relationship.belongsTo(self, annotation);
+      return relationship.belongsTo(self, row, annotation);
     throw new ArgumentError(
         'Only a [BelongsTo] or [HasOne] annotation can assign '
             'a field of type ${property.type.reflectedType}');
@@ -235,19 +245,19 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
     return returnType.typeArguments.first.reflectedType;
   }
 
-  Future<_LazyFuture<Model>> _assignSingleLazyRelationship(Map<String, dynamic> self,
+  Future<_LazyFuture<Model>> _assignSingleLazyRelationship(M self,
       VariableMirror property) {
   }
 
-  Future<List<Model>> _assignMultiRelationship(Map<String, dynamic> self,
+  Future<List<Model>> _assignMultiRelationship(M self,
       VariableMirror property) {
   }
 
-  Future<Stream<Model>> _assignMultiLazyRelationship(Map<String, dynamic> self,
+  Future<Stream<Model>> _assignMultiLazyRelationship(M self,
       VariableMirror property) {
   }
 
-  Future<RepositoryQuery<Model>> _assignQueryRelationship(Map<String, dynamic> self,
+  Future<RepositoryQuery<Model>> _assignQueryRelationship(M self,
       VariableMirror property) {
   }
 

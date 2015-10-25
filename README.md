@@ -242,23 +242,11 @@ User firstUser = await users.find(1);
 
 ### Extending the repository
 
-The Trestle ORM has the mindset _convention over configuration_, so it infers a lot of things. For instance, the
-`Repository<User>` automatically works with a `users` table. `Repository<UpperCamelCase>` would look for
-`upper_camel_cases`.
-
-To override these options, we can extend the `Repository` like so:
-
-```dart
-class UsersRepository extends Repository<User> {
-  String get table => 'my_users_table';
-}
-```
-
 We can use this class to implement some query scopes or filters:
 
 ```dart
 class UsersRepository extends Repository<User> {
-  Query get ofDrinkingAge => where((user) => user.age > 20);
+  RepositoryQuery<User> get ofDrinkingAge => where((user) => user.age > 20);
 }
 
 // And use it like so:

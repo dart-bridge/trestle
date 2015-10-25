@@ -2,7 +2,7 @@ part of trestle.orm;
 
 class Repository<M> {
   final Gateway _gateway;
-  final Entity<M> _entity;
+  final MapsFieldsToModel<M> _entity;
 
   Repository(Gateway gateway)
       : _gateway = gateway,
@@ -12,7 +12,7 @@ class Repository<M> {
 
   get table => _entity.table;
 
-  static Entity _makeEntity(Gateway gateway, Type type) {
+  static MapsFieldsToModel _makeEntity(Gateway gateway, Type type) {
     final mirror = reflectType(type);
     if (mirror.isAssignableTo(reflectType(Model)))
       return new ModelEntity(gateway, mirror);

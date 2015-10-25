@@ -3,7 +3,7 @@ import 'package:trestle/trestle.dart';
 import 'dart:mirrors';
 
 main() {
-  Entity<Article> articleEntity;
+  MapsFieldsToModel<Article> articleEntity;
 
   setUp(() {
     articleEntity = new DataStructureEntity<Article>(reflectType(Article));
