@@ -2,13 +2,16 @@ part of trestle.orm;
 
 class RepositoryQuery<M> {
   final Query _query;
-  final MapsFieldsToObject<M> _entity;
+  final MapsFieldsToObject<M> _mapper;
+  final Map<Symbol, Object> _assignments;
 
-  RepositoryQuery(this._query, this._entity);
+  RepositoryQuery(this._query, this._mapper, [this._assignments = const {}]);
 
-  Future<M> first() => _query.first().then(_entity.deserialize);
+  Future<M> first() => get().first;
 
-  Stream<M> get() => _query.get().map(_entity.deserialize);
+  Stream<M> get() => _query.get()
+      .map(_mapper.deserialize)
+      .map(_applyAssignments);
 
   Future delete() => _query.delete();
 
@@ -28,15 +31,26 @@ class RepositoryQuery<M> {
 
   Future<int> min(String field) => _query.min(field);
 
-  RepositoryQuery limit(int count) =>
-      new RepositoryQuery(_query.limit(count), _entity);
+  RepositoryQuery<M> limit(int count) =>
+      new RepositoryQuery(_query.limit(count), _mapper);
 
-  RepositoryQuery offset(int count) =>
-      new RepositoryQuery(_query.offset(count), _entity);
+  RepositoryQuery<M> offset(int count) =>
+      new RepositoryQuery(_query.offset(count), _mapper);
 
-  RepositoryQuery sortBy(String field, [String direction = 'asc']) =>
-      new RepositoryQuery(_query.sortBy(field, direction), _entity);
+  RepositoryQuery<M> sortBy(String field, [String direction = 'asc']) =>
+      new RepositoryQuery(_query.sortBy(field, direction), _mapper);
 
-  RepositoryQuery where(bool predicate(row)) =>
-      new RepositoryQuery(_query.where(predicate), _entity);
+  RepositoryQuery<M> where(bool predicate(row)) =>
+      new RepositoryQuery(_query.where(predicate), _mapper);
+
+  RepositoryQuery<M> _assign(Symbol name, Object value) =>
+      new RepositoryQuery(_query, _mapper,
+          new Map.unmodifiable(new Map.from(_assignments)
+            ..addAll({name: value})));
+
+  M _applyAssignments(M model) {
+    final mirror = reflect(model);
+    _assignments.forEach(mirror.setField);
+    return model;
+  }
 }

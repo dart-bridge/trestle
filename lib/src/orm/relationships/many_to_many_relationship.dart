@@ -1,20 +1,14 @@
 part of trestle.orm;
 
-class _ManyToManyRelationship<Parent extends Model, Child extends Model> {
-  final Gateway _gateway;
-  final HasMany _parentAnnotation;
-  final BelongsToMany _childAnnotation;
+class _ManyToManyRelationship<Parent extends Model, Child extends Model>
+    extends _RelationshipDeclaration<Parent, Child> {
+  _ManyToManyRelationship(_RelationshipDeclarationData data) : super(data);
 
-  _ManyToManyRelationship(this._gateway, this._parentAnnotation,
-      this._childAnnotation);
-
-  RepositoryQuery<Parent> parentsOf(Child child,
-      MapsFieldsToModel<Parent> entity) {
+  RepositoryQuery<Parent> parent(Map fields) {
     throw 'MANY TO MANY';
   }
 
-  RepositoryQuery<Child> childrenOf(Parent parent,
-      MapsFieldsToModel<Child> entity) {
+  RepositoryQuery<Child> child(Map fields) {
     throw 'MANY TO MANY';
   }
 }

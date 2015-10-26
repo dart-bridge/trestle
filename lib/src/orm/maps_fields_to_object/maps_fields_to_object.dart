@@ -31,7 +31,7 @@ abstract class MapsFieldsToObjectBase<M> implements MapsFieldsToObject<M> {
 
   String get table => _table;
   final ClassMirror _type;
-  static final List<M> _deserialized = [];
+  static final List _deserialized = [];
 
   MapsFieldsToObjectBase(TypeMirror type) : _type = type {
     _table = _getTableName(type);
@@ -58,9 +58,9 @@ abstract class MapsFieldsToObjectBase<M> implements MapsFieldsToObject<M> {
 
   Map<String, Symbol> __fields;
 
-  Map<String, Symbol> get _fields => __fields ??= _getFields();
+  Map<String, Symbol> get _fields => __fields ??= _findFields();
 
-  Map<String, Symbol> _getFields();
+  Map<String, Symbol> _findFields();
 
   Map<String, dynamic> serialize(M model) {
     final map = <String, dynamic>{};

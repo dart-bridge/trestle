@@ -8,26 +8,7 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
   String get foreignKey => MapsFieldsToObject._camelToSnakeCase(
       MirrorSystem.getName(_type.simpleName)) + '_id';
 
-  ParentChildRelationship<dynamic, M> relationshipWithParent(Type type) =>
-      new ParentChildRelationship<dynamic, M>(
-          _gateway, parent: type, child: _type.reflectedType);
-
-  ParentChildRelationship<M, dynamic> relationshipWithChild(Type type) =>
-      new ParentChildRelationship<M, dynamic>(
-          _gateway, child: type, parent: _type.reflectedType);
-
-  Iterable<Symbol> _getGetterSetters(bool containsMetadata(InstanceMirror i)) {
-    final members = _type.instanceMembers.keys;
-    return members.where((s) {
-      final name = MirrorSystem.getName(s);
-      return members.contains(new Symbol('$name=')) &&
-          (_type as dynamic).instanceMembers[s].owner.declarations[s]
-              ?.metadata
-              ?.any(containsMetadata);
-    });
-  }
-
-  Map<String, Symbol> _getFields() {
+  Map<String, Symbol> _findFields() {
     final symbols = _getGetterSetters(_isFieldAnnotation);
     final Iterable<MethodMirror> mirrors = symbols.map((f) =>
     (_type as dynamic).instanceMembers[f].owner.declarations[f]);
@@ -39,13 +20,18 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
         .map((fieldAndSymbol) => fieldAndSymbol[0].field
         ?? MapsFieldsToObject._camelToSnakeCase(
             MirrorSystem.getName(fieldAndSymbol[1])));
-    return new Map<String, Symbol>.fromIterables(fields, symbols)
-      ..addAll(new Map.fromIterables(_relationshipFieldNames(),
-          _relationshipFieldSymbols()));
+    return new Map<String, Symbol>.fromIterables(fields, symbols);
   }
 
-  Iterable<String> _relationshipFieldNames() {
-    return _relationshipFieldSymbols().map(MirrorSystem.getName);
+  Iterable<Symbol> _getGetterSetters(bool containsMetadata(InstanceMirror i)) {
+    final members = _type.instanceMembers.keys;
+    return members.where((s) {
+      final name = MirrorSystem.getName(s);
+      return members.contains(new Symbol('$name=')) &&
+          (_type as dynamic).instanceMembers[s].owner.declarations[s]
+              ?.metadata
+              ?.any(containsMetadata);
+    });
   }
 
   bool _isFieldAnnotation(InstanceMirror meta) {
@@ -64,161 +50,107 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
   }
 
   @override
-  Map<String, dynamic> serialize(M model) {
-    return super.serialize(model);
+  Future<M> deserialize(Map<String, dynamic> fields) async {
+    return super.deserialize(fields)
+        .then((m) => _attachRelationships(m, fields));
   }
 
-  @override
-  Future<M> deserialize(Map<String, dynamic> fields,
-      {bool attachRelationships: true}) {
-    final model = super.deserialize(fields);
-    if (attachRelationships)
-      return model.then((m) => deserializeRelationships(m, fields));
+  Future<M> _attachRelationships(M model, Map<String, dynamic> fields) async {
+    final mirror = reflect(model);
+    for (final relationship in _relationships)
+      await relationship.resolve(model, fields, mirror.setField);
     return model;
   }
 
-  Map<String, dynamic> serializeRelationships(Map<String, dynamic> fields) {
-//    final relationships = _getRelationships();
-//    print(relationships);
-    return fields;
-  }
+  Iterable<_RelationshipDeclaration> __relationships;
 
-  List<VariableMirror> _getRelationshipDeclarations() {
-    return _getGetterSetters(_isRelationshipAnnotation)
-        .map((s) =>
-    (_type.instanceMembers[s].owner as ClassMirror).declarations[s])
-        .toList();
-  }
+  Iterable<_RelationshipDeclaration> get _relationships =>
+      __relationships ??= _getRelationships();
 
-  List<VariableMirror> __relationshipDeclarations;
-
-  List<VariableMirror> get _relationshipDeclarations =>
-      __relationshipDeclarations ??= _getRelationshipDeclarations();
-
-  bool _isRelationshipAnnotation(InstanceMirror meta) {
-    return meta.reflectee is RelationshipAnnotation;
-  }
-
-  Future<M> deserializeRelationships(M self, Map row) async {
-    final mirror = reflect(self);
-    final keys = _relationshipFieldSymbols()
-        .where((s) => mirror
-        .getField(s)
-        .reflectee == null);
-    final values = await _relationshipFieldValues(keys, self, row).toList();
-    new Map.fromIterables(keys, values).forEach(mirror.setField);
-    return self;
-  }
-
-  Stream _relationshipFieldValues(Iterable<Symbol> symbols, M self,
-      Map row) async* {
-    final futures = _relationshipDeclarations
-        .where((m) => symbols.contains(m.simpleName))
-        .map((m) => _getRelationshipProperty(self, row, m));
-    for (final future in futures) {
-      if (future is LazyFuture)
-        yield future;
-      else yield await future;
-    }
-  }
-
-  Iterable<Symbol> _relationshipFieldSymbols() {
-    return _relationshipDeclarations.map((m) => m.simpleName);
-  }
-
-  Future _getRelationshipProperty(M self, Map row,
-      VariableMirror property) {
-    final returnType = property.type;
-
-    // Model
-    if (returnType.isAssignableTo(reflectType(Model)))
-      return _assignSingleRelationship(self, row, property);
-
-    // Future<M>
-    if (returnType.isAssignableTo(reflectType(Future)))
-      return _assignSingleLazyRelationship(self, row, property);
-
-    // List<M>
-    if (returnType.isAssignableTo(reflectType(List)))
-      return _assignMultiRelationship(self, row, property);
-
-    // Stream<M>
-    if (returnType.isAssignableTo(reflectType(Stream)))
-      return _assignMultiLazyRelationship(self, row, property);
-
-    // RepositoryQuery<M>
-    if (returnType.isAssignableTo(reflectType(RepositoryQuery)))
-      return _assignQueryRelationship(self, row, property);
-
-    throw new ArgumentError('$returnType is not a valid relationship type');
-  }
-
-  Future<Model> _assignSingleRelationship(M self, Map row,
-      VariableMirror property) {
-    final annotation = _relationshipAnnotation(property);
-    final relatedType = _relatedType(property.type);
-    final isParent = annotation is HasOne || annotation is HasMany;
-    final relationship = isParent
-        ? new ParentChildRelationship(
-        _gateway, parent: _type.reflectedType, child: relatedType)
-        : new ParentChildRelationship(
-        _gateway, child: _type.reflectedType, parent: relatedType);
-    if (annotation is HasOne)
-      return relationship.hasOne(self, row, annotation);
-    if (annotation is BelongsTo)
-      return relationship.belongsTo(self, row, annotation);
-    throw new ArgumentError(
-        'Only a [BelongsTo] or [HasOne] annotation can assign '
-            'a field of type ${property.type.reflectedType}');
-  }
-
-  Type _relatedType(TypeMirror returnType) {
-    if (returnType.isAssignableTo(reflectType(Model)))
-      return returnType.reflectedType;
-    return returnType.typeArguments.first.reflectedType;
-  }
-
-  LazyFuture<Model> _assignSingleLazyRelationship(M self, Map row,
-      VariableMirror property) {
-    return new LazyFuture(() {
-      return _assignSingleRelationship(self, row, property);
+  Iterable<_RelationshipDeclaration> _getRelationships() {
+    return _relationshipFields().map((VariableMirror mirror) {
+      final myMapper = new MapsFieldsToModel(_gateway, _type);
+      final theirMapper = new MapsFieldsToModel(_gateway,
+          mirror.type.isAssignableTo(reflectType(Model))
+          ? mirror.type
+          : mirror.type.typeArguments.first);
+      final myAnnotation = _myAnnotation(mirror);
+      final theirAnnotation = _theirAnnotation(mirror);
+      final isParent = myAnnotation is HasOne ||
+          myAnnotation is HasMany;
+      final childMapper = isParent ? theirMapper : myMapper;
+      final parentMapper = isParent ? myMapper : theirMapper;
+      final data = new _RelationshipDeclarationData(
+          foreignAnnotation: theirAnnotation,
+          annotation: myAnnotation,
+          assignType: mirror.type,
+          name: mirror.simpleName,
+          gateway: _gateway,
+          parentMapper: parentMapper,
+          childMapper: childMapper
+      );
+      if (myAnnotation is HasOne && theirAnnotation is BelongsTo)
+        return new _OneToOneRelationship(data);
+      if (myAnnotation is HasMany && theirAnnotation is BelongsTo)
+        return new _OneToManyRelationship(data);
+      if (myAnnotation is HasOne && theirAnnotation is BelongsToMany)
+        return new _ManyToOneRelationship(data);
+      if (myAnnotation is HasMany && theirAnnotation is BelongsToMany)
+        return new _ManyToManyRelationship(data);
+      if (myAnnotation is HasOne)
+        return new _OneToOneRelationship(data);
+      if (myAnnotation is HasMany)
+        return new _ManyToOneRelationship(data);
+      if (myAnnotation is BelongsTo)
+        return new _OneToOneRelationship(data);
+      if (myAnnotation is BelongsToMany)
+        return new _OneToManyRelationship(data);
+      throw new ArgumentError('Invalid relationship declaration: '
+          '[$myAnnotation] and [$theirAnnotation]');
     });
   }
 
-  Future<List<Model>> _assignMultiRelationship(M self, Map row,
-      VariableMirror property) {
-    return _assignQueryRelationship(self, row, property)
-        .then((q) => q.get().toList());
-  }
-
-  Future<Stream<Model>> _assignMultiLazyRelationship(M self, Map row,
-      VariableMirror property) {
-    return _assignQueryRelationship(self, row, property).then((q) => q.get());
-  }
-
-  Future<RepositoryQuery<Model>> _assignQueryRelationship(M self, Map row,
-      VariableMirror property) {
-    final annotation = _relationshipAnnotation(property);
-    final relatedType = _relatedType(property.type);
-    final isParent = annotation is HasOne || annotation is HasMany;
-    final relationship = isParent
-        ? new ParentChildRelationship(
-        _gateway, parent: _type.reflectedType, child: relatedType)
-        : new ParentChildRelationship(
-        _gateway, child: _type.reflectedType, parent: relatedType);
-    if (annotation is HasMany)
-      return relationship.hasMany(self, annotation);
-    if (annotation is BelongsToMany)
-      return relationship.belongsToMany(self, annotation);
-    throw new ArgumentError(
-        'Only a [BelongsToMany] or [HasMany] annotation can assign '
-            'a field of type ${property.type.reflectedType}');
-  }
-
-  RelationshipAnnotation _relationshipAnnotation(VariableMirror property) {
-    return property.metadata
-        .firstWhere(_isRelationshipAnnotation)
+  RelationshipAnnotation _myAnnotation(VariableMirror mirror) {
+    return (mirror.owner as ClassMirror)
+        .declarations[mirror.simpleName]
+        .metadata
+        .firstWhere(_isRelationshipMetadata, orElse: () => null)
         .reflectee;
+  }
+
+  bool _isRelationshipMetadata(InstanceMirror mirror) {
+    return mirror.reflectee is RelationshipAnnotation;
+  }
+
+  RelationshipAnnotation _theirAnnotation(VariableMirror mirror) {
+    final ClassMirror classMirror = mirror.type
+        .isAssignableTo(reflectType(Model))
+        ? mirror.type
+        : mirror.type.typeArguments.first;
+    return classMirror.instanceMembers.values
+        .where((i) => _isValidRelationshipAssign(i.returnType, _type))
+        .where((i) => i.owner is ClassMirror &&
+        (i.owner as ClassMirror).declarations.containsKey(i.simpleName) &&
+        (i.owner as ClassMirror).declarations[i.simpleName].metadata.any(
+            _isRelationshipMetadata))
+        .map((i) => (i.owner as ClassMirror).declarations[i.simpleName]
+        .metadata
+        .firstWhere((i) => i.reflectee is RelationshipAnnotation))
+        .map((i) => i.reflectee).first;
+  }
+
+  bool _isValidRelationshipAssign(TypeMirror local,
+      TypeMirror foreign) {
+    return !local.isAssignableTo(reflectType(dynamic)) &&
+      local.isAssignableTo(foreign) ||
+        (local.typeArguments.length == 1 &&
+            local.typeArguments.first.isAssignableTo(foreign));
+  }
+
+  Iterable<VariableMirror> _relationshipFields() {
+    return _getGetterSetters(_isRelationshipMetadata)
+        .map((s) => (_type.instanceMembers[s].owner as ClassMirror)
+        .declarations[s]);
   }
 }
 

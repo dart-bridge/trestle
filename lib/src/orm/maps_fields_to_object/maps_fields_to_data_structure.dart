@@ -3,7 +3,7 @@ part of trestle.orm;
 class MapsFieldsToDataStructure<M> extends MapsFieldsToObjectBase<M> {
   MapsFieldsToDataStructure(TypeMirror type) : super(type);
 
-  Map<String, Symbol> _getFields() {
+  Map<String, Symbol> _findFields() {
     final members = _type.instanceMembers.keys;
     final symbols = members.where((s) {
       final name = MirrorSystem.getName(s);

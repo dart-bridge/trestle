@@ -1,20 +1,16 @@
 part of trestle.orm;
 
-class _ManyToOneRelationship<Parent extends Model, Child extends Model> {
-  final Gateway _gateway;
-  final HasOne _parentAnnotation;
-  final BelongsToMany _childAnnotation;
+class _ManyToOneRelationship<Parent extends Model, Child extends Model>
+    extends _RelationshipDeclaration<Parent, Child> {
+  _ManyToOneRelationship(_RelationshipDeclarationData data) : super(data);
 
-  _ManyToOneRelationship(this._gateway, this._parentAnnotation,
-      this._childAnnotation);
-
-  RepositoryQuery<Parent> parentsOf(Child child,
-      MapsFieldsToModel<Parent> entity) {
-    throw 'MANY TO ONE';
+  RepositoryQuery<Parent> parent(Map child) {
+    return _parentQuery((q) => q
+        .where((parent) => parent[_myKeyOnThem] == child[_myKeyOnMe]));
   }
 
-  Future<Child> childOf(Parent parent,
-      MapsFieldsToModel<Child> entity) {
-    throw 'MANY TO ONE';
+  RepositoryQuery<Child> child(Map parent) {
+    return _childQuery((q) => q
+        .where((child) => child[_theirKeyOnThem] == parent[_theirKeyOnMe]));
   }
 }
