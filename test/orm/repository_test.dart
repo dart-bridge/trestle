@@ -15,13 +15,13 @@ main() {
 
   Repository modelRepo(Type model) {
     return new Repository.of(
-        new ModelEntity(gateway, reflectType(model)),
+        new MapsFieldsToModel(gateway, reflectType(model)),
         gateway);
   }
 
   Repository dataRepo(Type model) {
     return new Repository.of(
-        new DataStructureEntity(reflectType(model)), gateway);
+        new MapsFieldsToDataStructure(reflectType(model)), gateway);
   }
 
   Future seed(String table, List<Map<String, dynamic>> rows) {

@@ -1,85 +1,12 @@
 part of trestle.orm;
 
-abstract class MapsFieldsToModel<M> {
-  String get table;
-
-  Future<M> deserialize(Map<String, dynamic> fields);
-
-  Map<String, dynamic> serialize(M model);
-
-  bool isSaved(M model);
-
-  Query find(Query query, M model);
-}
-
-String _camelToSnakeCase(String camelCase) {
-  return camelCase
-      .replaceAllMapped(new RegExp(r'[A-Z]'), (m) => '_${m[0].toLowerCase()}')
-      .replaceFirst(new RegExp(r'^_'), '');
-}
-
-String _pluralize(String singular) {
-  return singular.endsWith('y')
-      ? singular.replaceFirst(new RegExp(r'y$'), 'ies')
-      : singular.endsWith('s')
-      ? '${singular}es'
-      : '${singular}s';
-}
-
-abstract class BaseEntity<M> implements MapsFieldsToModel<M> {
-  String _table;
-
-  String get table => _table;
-  final ClassMirror _type;
-  final List<M> _deserialized = [];
-
-  BaseEntity(TypeMirror type)
-      : _type = type {
-    _table = _getTableName(type);
-  }
-
-  String _forceTableName(String table) => table;
-
-  String _getTableName(TypeMirror type) {
-    return _forceTableName(_pluralize(_camelToSnakeCase(
-        MirrorSystem.getName(type.simpleName))));
-  }
-
-  Future<M> deserialize(Map<String, dynamic> fields) async {
-    final instance = _type.newInstance(const Symbol(''), []);
-    final model = instance.reflectee;
-    for (final field in fields.keys)
-      if (_fields.containsKey(field))
-        instance.setField(_fields[field], fields[field]);
-    _deserialized.add(model);
-    return model;
-  }
-
-  Map<String, Symbol> __fields;
-
-  Map<String, Symbol> get _fields => __fields ??= _getFields();
-
-  Map<String, Symbol> _getFields();
-
-  Map<String, dynamic> serialize(M model) {
-    final map = <String, dynamic>{};
-    for (final field in _fields.keys)
-      map[field] = reflect(model)
-          .getField(_fields[field])
-          .reflectee;
-    return map;
-  }
-
-  bool isSaved(M model) => _deserialized.contains(model);
-}
-
-class ModelEntity<M extends Model> extends BaseEntity<M> {
+class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
   final Gateway _gateway;
 
-  ModelEntity(Gateway this._gateway, TypeMirror type) : super(type);
+  MapsFieldsToModel(Gateway this._gateway, TypeMirror type) : super(type);
 
-  String get foreignKey =>
-      _camelToSnakeCase(MirrorSystem.getName(_type.simpleName)) + '_id';
+  String get foreignKey => MapsFieldsToObject._camelToSnakeCase(
+      MirrorSystem.getName(_type.simpleName)) + '_id';
 
   ParentChildRelationship<dynamic, M> relationshipWithParent(Type type) =>
       new ParentChildRelationship<dynamic, M>(
@@ -110,7 +37,8 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
         .reflectee, m.simpleName
     ])
         .map((fieldAndSymbol) => fieldAndSymbol[0].field
-        ?? _camelToSnakeCase(MirrorSystem.getName(fieldAndSymbol[1])));
+        ?? MapsFieldsToObject._camelToSnakeCase(
+            MirrorSystem.getName(fieldAndSymbol[1])));
     return new Map<String, Symbol>.fromIterables(fields, symbols)
       ..addAll(new Map.fromIterables(_relationshipFieldNames(),
           _relationshipFieldSymbols()));
@@ -127,7 +55,7 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   find(Query query, M model) => query.where((other) => other.id == model.id);
 
   @override
-  String _forceTableName(String table) {
+  String _overrideTableName(String table) {
     if (_type.declarations.containsKey(#table))
       return _type
           .getField(#table)
@@ -177,16 +105,21 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
         .where((s) => mirror
         .getField(s)
         .reflectee == null);
-    final values = await _relationshipFieldValues(keys, self, row);
+    final values = await _relationshipFieldValues(keys, self, row).toList();
     new Map.fromIterables(keys, values).forEach(mirror.setField);
     return self;
   }
 
-  Future<Iterable> _relationshipFieldValues(Iterable<Symbol> symbols, M self,
-      Map row) async {
-    return Future.wait(_relationshipDeclarations
+  Stream _relationshipFieldValues(Iterable<Symbol> symbols, M self,
+      Map row) async* {
+    final futures = _relationshipDeclarations
         .where((m) => symbols.contains(m.simpleName))
-        .map((m) => _getRelationshipProperty(self, row, m)));
+        .map((m) => _getRelationshipProperty(self, row, m));
+    for (final future in futures) {
+      if (future is LazyFuture)
+        yield future;
+      else yield await future;
+    }
   }
 
   Iterable<Symbol> _relationshipFieldSymbols() {
@@ -194,7 +127,7 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
   }
 
   Future _getRelationshipProperty(M self, Map row,
-      VariableMirror property) async {
+      VariableMirror property) {
     final returnType = property.type;
 
     // Model
@@ -203,19 +136,19 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
 
     // Future<M>
     if (returnType.isAssignableTo(reflectType(Future)))
-      return _assignSingleLazyRelationship(self, property);
+      return _assignSingleLazyRelationship(self, row, property);
 
     // List<M>
     if (returnType.isAssignableTo(reflectType(List)))
-      return _assignMultiRelationship(self, property);
+      return _assignMultiRelationship(self, row, property);
 
     // Stream<M>
     if (returnType.isAssignableTo(reflectType(Stream)))
-      return _assignMultiLazyRelationship(self, property);
+      return _assignMultiLazyRelationship(self, row, property);
 
     // RepositoryQuery<M>
     if (returnType.isAssignableTo(reflectType(RepositoryQuery)))
-      return _assignQueryRelationship(self, property);
+      return _assignQueryRelationship(self, row, property);
 
     throw new ArgumentError('$returnType is not a valid relationship type');
   }
@@ -245,79 +178,47 @@ class ModelEntity<M extends Model> extends BaseEntity<M> {
     return returnType.typeArguments.first.reflectedType;
   }
 
-  Future<_LazyFuture<Model>> _assignSingleLazyRelationship(M self,
+  LazyFuture<Model> _assignSingleLazyRelationship(M self, Map row,
       VariableMirror property) {
+    return new LazyFuture(() {
+      return _assignSingleRelationship(self, row, property);
+    });
   }
 
-  Future<List<Model>> _assignMultiRelationship(M self,
+  Future<List<Model>> _assignMultiRelationship(M self, Map row,
       VariableMirror property) {
+    return _assignQueryRelationship(self, row, property)
+        .then((q) => q.get().toList());
   }
 
-  Future<Stream<Model>> _assignMultiLazyRelationship(M self,
+  Future<Stream<Model>> _assignMultiLazyRelationship(M self, Map row,
       VariableMirror property) {
+    return _assignQueryRelationship(self, row, property).then((q) => q.get());
   }
 
-  Future<RepositoryQuery<Model>> _assignQueryRelationship(M self,
+  Future<RepositoryQuery<Model>> _assignQueryRelationship(M self, Map row,
       VariableMirror property) {
+    final annotation = _relationshipAnnotation(property);
+    final relatedType = _relatedType(property.type);
+    final isParent = annotation is HasOne || annotation is HasMany;
+    final relationship = isParent
+        ? new ParentChildRelationship(
+        _gateway, parent: _type.reflectedType, child: relatedType)
+        : new ParentChildRelationship(
+        _gateway, child: _type.reflectedType, parent: relatedType);
+    if (annotation is HasMany)
+      return relationship.hasMany(self, annotation);
+    if (annotation is BelongsToMany)
+      return relationship.belongsToMany(self, annotation);
+    throw new ArgumentError(
+        'Only a [BelongsToMany] or [HasMany] annotation can assign '
+            'a field of type ${property.type.reflectedType}');
   }
 
   RelationshipAnnotation _relationshipAnnotation(VariableMirror property) {
     return property.metadata
         .firstWhere(_isRelationshipAnnotation)
         .reflectee;
-  }
-}
-
-class DataStructureEntity<M> extends BaseEntity<M> {
-  DataStructureEntity(TypeMirror type) : super(type);
-
-  Map<String, Symbol> _getFields() {
-    final members = _type.instanceMembers.keys;
-    final symbols = members.where((s) {
-      final name = MirrorSystem.getName(s);
-      return members.contains(new Symbol('$name='));
-    });
-    final fields = symbols.map(MirrorSystem.getName).map(_camelToSnakeCase);
-    return new Map<String, Symbol>.fromIterables(fields, symbols);
-  }
-
-  find(Query query, M model) {
-    throw new UnsupportedError(
-        '[$model] is not a Model. Only models can be updated.');
-  }
-}
-
-class _LazyFuture<T> implements Future<T> {
-  final Function _futureFunction;
-
-  _LazyFuture(this._futureFunction);
-
-  Future get _future => _futureFunction();
-
-  @override
-  Future then(onValue(T value), { Function onError }) {
-    return _future.then(onValue, onError: onError);
-  }
-
-  @override
-  Future catchError(Function onError,
-      {bool test(Object error)}) {
-    return _future.catchError(onError, test: test);
-  }
-
-  @override
-  Future<T> whenComplete(action()) {
-    return _future.whenComplete(action);
-  }
-
-  @override
-  Stream<T> asStream() {
-    return _future.asStream();
-  }
-
-  @override
-  Future timeout(Duration timeLimit, {onTimeout()}) {
-    return _future.timeout(timeLimit, onTimeout: onTimeout);
   }
 }
 

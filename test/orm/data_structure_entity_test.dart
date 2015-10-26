@@ -3,10 +3,10 @@ import 'package:trestle/trestle.dart';
 import 'dart:mirrors';
 
 main() {
-  MapsFieldsToModel<Article> articleEntity;
+  MapsFieldsToObject<Article> articleEntity;
 
   setUp(() {
-    articleEntity = new DataStructureEntity<Article>(reflectType(Article));
+    articleEntity = new MapsFieldsToDataStructure<Article>(reflectType(Article));
   });
 
   test('it uses the name of the model for choosing table name', () {
