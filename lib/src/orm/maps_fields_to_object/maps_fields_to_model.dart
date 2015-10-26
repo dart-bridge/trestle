@@ -76,12 +76,14 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
           : mirror.type.typeArguments.first);
       final myAnnotation = _myAnnotation(mirror);
       final theirAnnotation = _theirAnnotation(mirror);
+      final theirName = _theirName(mirror);
       final isParent = myAnnotation is HasOne ||
           myAnnotation is HasMany;
       final childMapper = isParent ? theirMapper : myMapper;
       final parentMapper = isParent ? myMapper : theirMapper;
       final data = new _RelationshipDeclarationData(
           foreignAnnotation: theirAnnotation,
+          foreignName: theirName,
           annotation: myAnnotation,
           assignType: mirror.type,
           name: mirror.simpleName,
@@ -122,7 +124,7 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
     return mirror.reflectee is RelationshipAnnotation;
   }
 
-  RelationshipAnnotation _theirAnnotation(VariableMirror mirror) {
+  DeclarationMirror _theirDeclaration(VariableMirror mirror) {
     final ClassMirror classMirror = mirror.type
         .isAssignableTo(reflectType(Model))
         ? mirror.type
@@ -133,10 +135,17 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
         (i.owner as ClassMirror).declarations.containsKey(i.simpleName) &&
         (i.owner as ClassMirror).declarations[i.simpleName].metadata.any(
             _isRelationshipMetadata))
-        .map((i) => (i.owner as ClassMirror).declarations[i.simpleName]
-        .metadata
-        .firstWhere((i) => i.reflectee is RelationshipAnnotation))
-        .map((i) => i.reflectee).first;
+        .map((i) => (i.owner as ClassMirror).declarations[i.simpleName]).first;
+  }
+
+  RelationshipAnnotation _theirAnnotation(VariableMirror mirror) {
+    final declaration = _theirDeclaration(mirror);
+    return declaration.metadata.firstWhere(_isRelationshipMetadata).reflectee;
+  }
+
+  Symbol _theirName(VariableMirror mirror) {
+    final declaration = _theirDeclaration(mirror);
+    return declaration.simpleName;
   }
 
   bool _isValidRelationshipAssign(TypeMirror local,

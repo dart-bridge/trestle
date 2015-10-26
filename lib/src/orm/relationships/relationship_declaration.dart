@@ -2,6 +2,7 @@ part of trestle.orm;
 
 class _RelationshipDeclarationData<Parent extends Model, Child extends Model> {
   final RelationshipAnnotation foreignAnnotation;
+  final Symbol foreignName;
   final RelationshipAnnotation annotation;
   final TypeMirror assignType;
   final Symbol name;
@@ -13,6 +14,7 @@ class _RelationshipDeclarationData<Parent extends Model, Child extends Model> {
   this.annotation,
   this.assignType,
   this.name,
+  this.foreignName,
   this.gateway,
   this.parentMapper,
   this.childMapper});
@@ -23,6 +25,7 @@ abstract class _RelationshipDeclaration
   final RelationshipAnnotation _foreignAnnotation;
   final RelationshipAnnotation _annotation;
   final TypeMirror _assignType;
+  final Symbol _foreignName;
   final Symbol _name;
   final Gateway _gateway;
   final MapsFieldsToModel<Parent> _parentMapper;
@@ -30,6 +33,7 @@ abstract class _RelationshipDeclaration
 
   _RelationshipDeclaration(_RelationshipDeclarationData data)
       : _foreignAnnotation = data.foreignAnnotation,
+        _foreignName = data.foreignName,
         _annotation = data.annotation,
         _assignType = data.assignType,
         _name = data.name,
@@ -53,8 +57,9 @@ abstract class _RelationshipDeclaration
       Map fields,
       void set(Symbol name, Object value)) async {
     final future = _wrapInType(
-        _makeQuery(fields)._assign(_name, model)
-    );
+        _foreignName == null
+        ? _makeQuery(fields)
+        : _makeQuery(fields)._assign(_foreignName, model));
     final value = future is LazyFuture ? future : await future;
     set(_name, value);
   }
