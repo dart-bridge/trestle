@@ -165,7 +165,7 @@ main() {
       });
     }, skip: 'not yet implemeted');
 
-    group('one to many', () {
+    group('many to many', () {
       setUp(() {
         repo = modelRepo(ConventionalManyToManyParent);
         childRepo = modelRepo(ConventionalManyToManyChild);

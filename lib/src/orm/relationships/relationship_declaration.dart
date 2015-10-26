@@ -1,8 +1,8 @@
 part of trestle.orm;
 
 class _RelationshipDeclarationData<Parent extends Model, Child extends Model> {
-  final RelationshipAnnotation foreignAnnotation;
-  final Symbol foreignName;
+  final Iterable<RelationshipAnnotation> foreignAnnotations;
+  final Iterable<Symbol> foreignNames;
   final RelationshipAnnotation annotation;
   final TypeMirror assignType;
   final Symbol name;
@@ -10,11 +10,11 @@ class _RelationshipDeclarationData<Parent extends Model, Child extends Model> {
   final MapsFieldsToModel<Parent> parentMapper;
   final MapsFieldsToModel<Child> childMapper;
 
-  _RelationshipDeclarationData({this.foreignAnnotation,
+  _RelationshipDeclarationData({this.foreignAnnotations,
   this.annotation,
   this.assignType,
   this.name,
-  this.foreignName,
+  this.foreignNames,
   this.gateway,
   this.parentMapper,
   this.childMapper});
@@ -22,18 +22,18 @@ class _RelationshipDeclarationData<Parent extends Model, Child extends Model> {
 
 abstract class _RelationshipDeclaration
 <Parent extends Model, Child extends Model> {
-  final RelationshipAnnotation _foreignAnnotation;
+  final Iterable<RelationshipAnnotation> _foreignAnnotations;
+  final Iterable<Symbol> _foreignNames;
   final RelationshipAnnotation _annotation;
   final TypeMirror _assignType;
-  final Symbol _foreignName;
   final Symbol _name;
   final Gateway _gateway;
   final MapsFieldsToModel<Parent> _parentMapper;
   final MapsFieldsToModel<Child> _childMapper;
 
   _RelationshipDeclaration(_RelationshipDeclarationData data)
-      : _foreignAnnotation = data.foreignAnnotation,
-        _foreignName = data.foreignName,
+      : _foreignAnnotations = data.foreignAnnotations,
+        _foreignNames = data.foreignNames ?? const [],
         _annotation = data.annotation,
         _assignType = data.assignType,
         _name = data.name,
@@ -56,12 +56,16 @@ abstract class _RelationshipDeclaration
       Model model,
       Map fields,
       void set(Symbol name, Object value)) async {
-    final future = _wrapInType(
-        _foreignName == null
-        ? _makeQuery(fields)
-        : _makeQuery(fields)._assign(_foreignName, model));
+    final future = _wrapInType(_assignForeign(_makeQuery(fields), model));
     final value = future is LazyFuture ? future : await future;
     set(_name, value);
+  }
+
+  RepositoryQuery _assignForeign(RepositoryQuery query, Model value) {
+    var _query = query;
+    for (final name in _foreignNames)
+      _query = _query._assign(name, value);
+    return _query;
   }
 
   bool get isParent => _annotation is HasMany || _annotation is HasOne;
@@ -83,9 +87,9 @@ abstract class _RelationshipDeclaration
       return new Future.value(query.get());
 
     if (_assignType.isAssignableTo(reflectType(Future)))
-      return new LazyFuture(() => query.first().catchError((_) => null));
+      return new LazyFuture(() => query.first());
 
-    return query.first().catchError((_) => null);
+    return query.first();
   }
 
   String get _myKeyOnThem => _myKey ?? isParent
@@ -100,9 +104,11 @@ abstract class _RelationshipDeclaration
 
   String get _theirKeyOnThem => _theirKey ?? 'id';
 
-  String get _myKey => _annotation.mine ?? _foreignAnnotation?.theirs;
+  String get _myKey => _annotation.mine ?? _foreignAnnotations.length > 0
+      ? _foreignAnnotations.first?.theirs : null;
 
-  String get _theirKey => _annotation.theirs ?? _foreignAnnotation?.mine;
+  String get _theirKey => _annotation.theirs ?? _foreignAnnotations.length > 0
+      ? _foreignAnnotations.first?.mine : null;
 
   RepositoryQuery<Parent> parent(Map child);
 

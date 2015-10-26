@@ -10,8 +10,7 @@ class RepositoryQuery<M> {
   Future<M> first() => get().first;
 
   Stream<M> get() => _query.get()
-      .map(_mapper.deserialize)
-      .map(_applyAssignments);
+      .map((fields) => _mapper.deserialize(fields, _assignments));
 
   Future delete() => _query.delete();
 
@@ -47,10 +46,4 @@ class RepositoryQuery<M> {
       new RepositoryQuery(_query, _mapper,
           new Map.unmodifiable(new Map.from(_assignments)
             ..addAll({name: value})));
-
-  M _applyAssignments(M model) {
-    final mirror = reflect(model);
-    _assignments.forEach(mirror.setField);
-    return model;
-  }
 }

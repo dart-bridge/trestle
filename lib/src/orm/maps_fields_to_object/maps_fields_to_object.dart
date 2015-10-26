@@ -3,7 +3,9 @@ part of trestle.orm;
 abstract class MapsFieldsToObject<O> {
   String get table;
 
-  Future<O> deserialize(Map<String, dynamic> fields);
+  Future<O> deserialize(
+      Map<String, dynamic> fields,
+      [Map<Symbol, Object> assignments = const {}]);
 
   Map<String, dynamic> serialize(O object);
 
@@ -46,7 +48,9 @@ abstract class MapsFieldsToObjectBase<M> implements MapsFieldsToObject<M> {
         MirrorSystem.getName(type.simpleName))));
   }
 
-  Future<M> deserialize(Map<String, dynamic> fields) async {
+  Future<M> deserialize(
+      Map<String, dynamic> fields,
+      [Map<Symbol, Object> assignments = const {}]) async {
     final instance = _type.newInstance(const Symbol(''), []);
     final model = instance.reflectee;
     for (final field in fields.keys)
