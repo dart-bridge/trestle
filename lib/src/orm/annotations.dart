@@ -14,14 +14,6 @@ class RelationshipAnnotation {
   const RelationshipAnnotation(this.mine, this.theirs, this.table);
 }
 
-class _ManyToManyRelationshipAnnotation extends RelationshipAnnotation {
-  final bool pivot;
-
-  const _ManyToManyRelationshipAnnotation(
-      this.pivot, String mine, String theirs, String table)
-      : super(mine, theirs, table);
-}
-
 class HasOne extends RelationshipAnnotation {
   const HasOne({String mine, String theirs, String table})
       : super(mine, theirs, table);
@@ -32,14 +24,14 @@ class BelongsTo extends RelationshipAnnotation {
       : super(mine, theirs, table);
 }
 
-class HasMany extends _ManyToManyRelationshipAnnotation {
-  const HasMany({String mine, String theirs, String table, bool pivot})
-      : super(pivot, mine, theirs, table);
+class HasMany extends RelationshipAnnotation {
+  const HasMany({String mine, String theirs, String table})
+      : super(mine, theirs, table);
 }
 
-class BelongsToMany extends _ManyToManyRelationshipAnnotation {
-  const BelongsToMany({String mine, String theirs, String table, bool pivot})
-      : super(pivot, mine, theirs, table);
+class BelongsToMany extends RelationshipAnnotation {
+  const BelongsToMany({String mine, String theirs, String table})
+      : super(mine, theirs, table);
 }
 
 const field = const Field();

@@ -18,7 +18,8 @@ TableExpectation expectedTable(String expected) {
 
 ContentExpectation expectedContent(Map<String, dynamic> expected) {
   return (Map<String, dynamic> content) {
-    expect(content, equals(expected));
+    for(final key in expected.keys)
+      expect(content[key], equals(expected[key]));
   };
 }
 
@@ -70,9 +71,6 @@ class SimpleModel extends Model {
   String willNotBeSerialized;
 
   ContentExpectation get expectContent => expectedContent({
-    'id': id,
-    'created_at': createdAt,
-    'updated_at': updatedAt,
     'property': property,
     'camel_case': camelCase,
     'completely_overridden': overridden,
@@ -172,7 +170,9 @@ class ConventionalManyToManyChild extends Model {
 // Unconventional relationships
 
 class UnconventionalOneToOneParent extends Model {
-  static const table = 'parents';
+  static const table = 'parents_x';
+
+  @override @Field('id_x') int id;
 
   @HasOne(mine: 'child_id_x', theirs: 'id_x')
   UnconventionalOneToOneChild child;
@@ -183,7 +183,9 @@ class UnconventionalOneToOneParent extends Model {
 }
 
 class UnconventionalOneToOneChild extends Model {
-  static const table = 'children';
+  static const table = 'children_x';
+
+  @override @Field('id_x') int id;
 
   @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
   UnconventionalOneToOneParent parent;
@@ -194,13 +196,15 @@ class UnconventionalOneToOneChild extends Model {
 }
 
 class UnconventionalOneToManyParent extends Model {
-  static const table = 'parents';
+  static const table = 'parents_x';
 
-  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @override @Field('id_x') int id;
+
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x')
   List<UnconventionalOneToManyChild> children;
-  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x')
   Stream<UnconventionalOneToManyChild> lazyChildren;
-  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @HasMany(mine: 'id_x', theirs: 'parent_id_x')
   RepositoryQuery<UnconventionalOneToManyChild> queryChildren;
 
   ModelsExpectation get expectChildren =>
@@ -208,35 +212,41 @@ class UnconventionalOneToManyParent extends Model {
 }
 
 class UnconventionalOneToManyChild extends Model {
-  static const table = 'children';
+  static const table = 'children_x';
 
-  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  @override @Field('id_x') int id;
+
+  @BelongsTo(mine: 'parent_id_x', theirs: 'id_x')
   UnconventionalOneToManyParent parent;
-  @BelongsTo(mine: 'id_x', theirs: 'child_id_x')
+  @BelongsTo(mine: 'parent_id_x', theirs: 'id_x')
   Future<UnconventionalOneToManyParent> lazyParent;
 
   ModelExpectation get expectParent => expectedModel(() => [parent, lazyParent]);
 }
 
 class UnconventionalManyToOneParent extends Model {
-  static const table = 'parents';
+  static const table = 'parents_x';
 
-  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @override @Field('id_x') int id;
+
+  @HasOne(mine: 'child_id_x', theirs: 'id_x')
   UnconventionalManyToOneChild child;
-  @HasMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @HasOne(mine: 'child_id_x', theirs: 'id_x')
   Future<UnconventionalManyToOneChild> lazyChild;
 
   ModelExpectation get expectChild => expectedModel(() => [child, lazyChild]);
 }
 
 class UnconventionalManyToOneChild extends Model {
-  static const table = 'children';
+  static const table = 'children_x';
 
-  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @override @Field('id_x') int id;
+
+  @BelongsToMany(mine: 'id_x', theirs: 'child_id_x')
   List<UnconventionalManyToOneParent> parents;
-  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @BelongsToMany(mine: 'id_x', theirs: 'child_id_x')
   Stream<UnconventionalManyToOneParent> lazyParents;
-  @BelongsToMany(mine: 'id_x', theirs: 'parent_id_x', pivot: false)
+  @BelongsToMany(mine: 'id_x', theirs: 'child_id_x')
   RepositoryQuery<UnconventionalManyToOneParent> queryParents;
 
   ModelsExpectation get expectParents =>
@@ -244,22 +254,21 @@ class UnconventionalManyToOneChild extends Model {
 }
 
 class UnconventionalManyToManyParent extends Model {
-  static const table = 'parents';
+  static const table = 'parents_x_mtm';
+
+  @override @Field('id_x') int id;
 
   @HasMany(mine: 'id_x',
       theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      table: 'parents_children_x')
   List<UnconventionalManyToManyChild> children;
   @HasMany(mine: 'id_x',
       theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      table: 'parents_children_x')
   Stream<UnconventionalManyToManyChild> lazyChildren;
   @HasMany(mine: 'id_x',
       theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      table: 'parents_children_x')
   RepositoryQuery<UnconventionalManyToManyChild> queryChildren;
 
   ModelsExpectation get expectChildren =>
@@ -267,22 +276,21 @@ class UnconventionalManyToManyParent extends Model {
 }
 
 class UnconventionalManyToManyChild extends Model {
-  static const table = 'children';
+  static const table = 'children_x_mtm';
+
+  @override @Field('id_x') int id;
 
   @BelongsToMany(mine: 'id_x',
-      theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      theirs: 'child_id_x',
+      table: 'parents_children_x')
   List<UnconventionalManyToManyParent> parents;
   @BelongsToMany(mine: 'id_x',
-      theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      theirs: 'child_id_x',
+      table: 'parents_children_x')
   Stream<UnconventionalManyToManyParent> lazyParents;
   @BelongsToMany(mine: 'id_x',
-      theirs: 'parent_id_x',
-      table: 'parents_children_x',
-      pivot: true)
+      theirs: 'child_id_x',
+      table: 'parents_children_x')
   RepositoryQuery<UnconventionalManyToManyParent> queryParents;
 
   ModelsExpectation get expectParents =>

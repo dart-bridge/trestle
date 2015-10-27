@@ -13,10 +13,10 @@ class _ManyToManyRelationship<Parent extends Model, Child extends Model>
   }
 
   RepositoryQuery _pivot(Map self, MapsFieldsToModel mapper) {
-    final query = _gateway.table(_parentMapper.pivot(_childMapper))
+    final query = _gateway.table(_pivotTable)
         .join(mapper.table,
-        (pivot, other) => other[_theirKeyOnThem] == pivot[_theirKeyOnMe])
-        .where((other) => other[_myKeyOnThem] == self[_myKeyOnMe]);
+        (pivot, other) => pivot[_theirKeyOnPivot] == other[_theirPivotKeyOnThem])
+        .where((pivot) => pivot[_myKeyOnPivot] == self[_myKeyOnMe]);
     return new RepositoryQuery(query, mapper);
   }
 }

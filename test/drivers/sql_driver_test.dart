@@ -91,11 +91,13 @@ main() {
     });
 
     test('integration', () async {
+      const foreign = 'address_id';
+      const id = 'id';
       await gateway.table('users')
           .where((user) => user.age > 20 && user.first_name == 'John')
           .sortBy('first_name')
           .limit(1)
-          .join('addresses', (user, address) => user.address_id == address.id)
+          .join('addresses', (user, address) => user[foreign] == address[id])
           .get(['address', 'first_name', 'last_name']).toList();
 
       expectQuery(

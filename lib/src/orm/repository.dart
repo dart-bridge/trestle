@@ -2,15 +2,15 @@ part of trestle.orm;
 
 class Repository<M> {
   final Gateway _gateway;
-  final MapsFieldsToObject<M> _entity;
+  final MapsFieldsToObject<M> _mapper;
 
   Repository(Gateway gateway)
       : _gateway = gateway,
-        _entity = _makeEntity(gateway, M);
+        _mapper = _makeEntity(gateway, M);
 
-  Repository.of(this._entity, this._gateway);
+  Repository.of(this._mapper, this._gateway);
 
-  get table => _entity.table;
+  get table => _mapper.table;
 
   static MapsFieldsToObject _makeEntity(Gateway gateway, Type type) {
     final mirror = reflectType(type);
@@ -19,30 +19,30 @@ class Repository<M> {
     return new MapsFieldsToDataStructure(mirror);
   }
 
-  Query get _query => _gateway.table(_entity.table);
+  Query get _query => _gateway.table(_mapper.table);
 
-  RepositoryQuery<M> get _repoQuery => new RepositoryQuery<M>(_query, _entity);
+  RepositoryQuery<M> get _repoQuery => new RepositoryQuery<M>(_query, _mapper);
 
   Future save(M model) {
-    if (_entity.isSaved(model))
-      return _entity.find(_query, model).update(_entity.serialize(model));
-    return _query.add(_entity.serialize(model));
+    if (_mapper.isSaved(model))
+      return _mapper.find(_query, model).update(_mapper.serialize(model));
+    return _query.add(_mapper.serialize(model));
   }
 
   Future saveAll(Iterable<M> models) => Future.wait(models.map(save));
 
   Future delete(M model) async {
-    if (_entity.isSaved(model))
-      return _entity.find(_query, model).delete();
+    if (_mapper.isSaved(model))
+      return _mapper.find(_query, model).delete();
   }
 
   Future clear() => _query.delete();
 
-  Future<M> find(int id) => _query.find(id).first().then(_entity.deserialize);
+  Future<M> find(int id) => _query.find(id).first().then(_mapper.deserialize);
 
-  Future<M> first() => _query.first().then(_entity.deserialize);
+  Future<M> first() => _query.first().then(_mapper.deserialize);
 
-  Stream<M> all() => _query.get().asyncMap(_entity.deserialize);
+  Stream<M> all() => _query.get().asyncMap(_mapper.deserialize);
 
   Future decrement(String field, [int amount = 1]) =>
       _query.decrement(field, amount);

@@ -66,15 +66,22 @@ class PredicateParser {
     for (_PredicateRowMock row in rows) {
       for (var field in row._fields.values) {
         for (var operation in field.operations) {
-          final regExp = '${row._name}(?:\\.${field.name}|\\[.*?\\])'r'\s*'
-          '${operation[0]}'r'(?:\(.*\)|.)*?(?=[&|=<>)]|$)';
+          final regExp = '${row._name}(?:\\.${field.name}|\\[[^\\]]*?\\])'r'\s*'
+          '${operation[0]}'r'((?:\(.*\)|.)*?)(?=[&|=<>)]|$)';
           final value = operation[1];
-          if (value is _PredicateFieldMock)
-            continue;
-          final replaceWith = '${row._name}.${field
-              .name} %PARSED_OPERATION%${operation[0]} ${_formatInjectedValue(value)} ';
+          final replaceWith = (Match m) {
+            return '${row._name}.${field
+                .name} %PARSED_OPERATION%${operation[0]} ${_formatInjectedValue(
+                value, m[1])} ';
+          };
+//          print(regExp);
+//          print(_expression);
+//          print(_expression
+//              .replaceFirstMapped(new RegExp(regExp), replaceWith)
+//              .replaceAll(' )', ')')
+//              .trim());
           _expression = _expression
-              .replaceFirst(new RegExp(regExp), replaceWith)
+              .replaceFirstMapped(new RegExp(regExp), replaceWith)
               .replaceAll(' )', ')')
               .trim();
         }
@@ -83,7 +90,11 @@ class PredicateParser {
     _expression = _expression.replaceAll('%PARSED_OPERATION%', '');
   }
 
-  String _formatInjectedValue(Object value) {
+  String _formatInjectedValue(Object value, String code) {
+    if (value is _PredicateFieldMock) {
+      final prefix = code.split(new RegExp(r'[.\[]')).first.trim();
+      return '$prefix.${value.name}';
+    }
     if (value is String) {
       _variables.add(value);
       return '?';

@@ -87,28 +87,45 @@ abstract class _RelationshipDeclaration
       return new Future.value(query.get());
 
     if (_assignType.isAssignableTo(reflectType(Future)))
-      return new LazyFuture(() => query.first());
+      return new LazyFuture(() => query.first().catchError((_) => null));
 
-    return query.first();
+    return query.first().catchError((_) => null);
   }
 
-  String get _myKeyOnThem => _myKey ?? isParent
-      ? _parentMapper.foreignKey
-      : _childMapper.foreignKey;
+  String get _myKeyOnThem => _onThem ?? _myForeign;
 
-  String get _theirKeyOnMe => _theirKey ?? isParent
-      ? _childMapper.foreignKey
-      : _parentMapper.foreignKey;
+  String get _theirKeyOnMe => _onMe ?? _theirForeign;
 
-  String get _myKeyOnMe => _myKey ?? 'id';
+  String get _myForeign => (isParent
+      ? _parentMapper.foreignKey : _childMapper.foreignKey);
 
-  String get _theirKeyOnThem => _theirKey ?? 'id';
+  String get _theirForeign => (isParent
+      ? _childMapper.foreignKey : _parentMapper.foreignKey);
 
-  String get _myKey => _annotation.mine ?? _foreignAnnotations.length > 0
-      ? _foreignAnnotations.first?.theirs : null;
+  String get _myKeyOnMe => _onMe ?? 'id';
 
-  String get _theirKey => _annotation.theirs ?? _foreignAnnotations.length > 0
-      ? _foreignAnnotations.first?.mine : null;
+  String get _theirKeyOnThem => _onThem ?? 'id';
+
+  String get _onMe => _annotation.mine ??
+      (_foreignAnnotations.length > 0 ?
+      _foreignAnnotations.first?.theirs : null);
+
+  String get _onThem => _annotation.theirs ??
+      (_foreignAnnotations.length > 0 ?
+      _foreignAnnotations.first?.mine : null);
+
+  String get _pivotTable => _annotation.table ??
+      (_foreignAnnotations.length > 0 ?
+      _foreignAnnotations.first?.table : null) ??
+      _parentMapper.pivot(_childMapper);
+
+  String get _theirKeyOnPivot => (_foreignAnnotations.length > 0 ?
+  _foreignAnnotations.first?.theirs : null) ?? _theirForeign;
+
+  String get _myKeyOnPivot => _annotation.theirs ?? _myForeign;
+
+  String get _theirPivotKeyOnThem => (_foreignAnnotations.length > 0 ?
+  _foreignAnnotations.first?.mine : null) ?? 'id';
 
   RepositoryQuery<Parent> parent(Map child);
 
