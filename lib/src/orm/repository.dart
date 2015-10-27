@@ -42,7 +42,7 @@ class Repository<M> {
 
   Future<M> first() => _query.first().then(_entity.deserialize);
 
-  Stream<M> all() => _query.get().map(_entity.deserialize);
+  Stream<M> all() => _query.get().asyncMap(_entity.deserialize);
 
   Future decrement(String field, [int amount = 1]) =>
       _query.decrement(field, amount);

@@ -123,8 +123,8 @@ main() {
           {'id': 33}
         ]);
         await seed('children', [
-          {'id': 44, 'parent_id': 33},
-          {'id': 55, 'parent_id': 33},
+          {'id': 44, 'conventional_one_to_many_parent_id': 33},
+          {'id': 55, 'conventional_one_to_many_parent_id': 33},
         ]);
 
         // Read
@@ -136,7 +136,7 @@ main() {
         await parent.expectChildren(children);
         await Future.wait(children.map((c) => c.expectParent(parent)));
       });
-    }, skip: 'not yet implemeted');
+    });
 
     group('many to one', () {
       setUp(() {
@@ -147,8 +147,8 @@ main() {
       test('read', () async {
         // Seed
         await seed('parents', [
-          {'id': 66, 'child_id': 88},
-          {'id': 77, 'child_id': 88},
+          {'id': 66, 'conventional_many_to_one_child_id': 88},
+          {'id': 77, 'conventional_many_to_one_child_id': 88},
         ]);
         await seed('children', [
           {'id': 88}
@@ -163,7 +163,7 @@ main() {
         await Future.wait(parents.map((c) => c.expectChild(child)));
         await child.expectParents(parents);
       });
-    }, skip: 'not yet implemeted');
+    });
 
     group('many to many', () {
       setUp(() {
@@ -181,11 +181,13 @@ main() {
           {'id': 1111},
           {'id': 1212},
         ]);
+        const parentId = 'conventional_many_to_many_parent_id';
+        const childId = 'conventional_many_to_many_child_id';
         await seed('parents_children', [
-          {'parent_id': 99, 'child_id': 1111},
-          {'parent_id': 99, 'child_id': 1212},
-          {'parent_id': 1010, 'child_id': 1111},
-          {'parent_id': 1010, 'child_id': 1212},
+          {parentId: 99, childId: 1111},
+          {parentId: 99, childId: 1212},
+          {parentId: 1010, childId: 1111},
+          {parentId: 1010, childId: 1212},
         ]);
 
         // Read
@@ -198,6 +200,6 @@ main() {
         await Future.wait(parents.map((c) => c.expectChildren(children)));
         await Future.wait(children.map((c) => c.expectParents(parents)));
       });
-    }, skip: 'not yet implemeted');
+    });
   });
 }

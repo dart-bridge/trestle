@@ -3,14 +3,14 @@ part of trestle.orm;
 class RepositoryQuery<M> {
   final Query _query;
   final MapsFieldsToObject<M> _mapper;
-  final Map<Symbol, Object> _assignments;
+  final Map<Symbol, List> _assignments;
 
   RepositoryQuery(this._query, this._mapper, [this._assignments = const {}]);
 
   Future<M> first() => get().first;
 
   Stream<M> get() => _query.get()
-      .map((fields) => _mapper.deserialize(fields, _assignments));
+      .asyncMap((fields) => _mapper.deserialize(fields, _assignments));
 
   Future delete() => _query.delete();
 
@@ -45,5 +45,6 @@ class RepositoryQuery<M> {
   RepositoryQuery<M> _assign(Symbol name, Object value) =>
       new RepositoryQuery(_query, _mapper,
           new Map.unmodifiable(new Map.from(_assignments)
-            ..addAll({name: value})));
+            ..addAll({name: new List.unmodifiable((_assignments[name] ?? [])
+              ..add(value))})));
 }

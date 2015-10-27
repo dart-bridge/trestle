@@ -51,32 +51,32 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
 
   @override
   Future<M> deserialize(Map<String, dynamic> fields,
-      [Map<Symbol, Object> assignments = const {}]) {
+      [Map<Symbol, List> assignments = const {}]) {
     return super.deserialize(fields)
         .then((m) => _attachAssignments(m, assignments))
         .then((m) => _attachRelationships(m, fields));
   }
 
-  _attachAssignments(M model, Map<Symbol, Object> assignments) {
+  _attachAssignments(M model, Map<Symbol, List> assignments) {
     final mirror = reflect(model);
     for (final symbol in assignments.keys) {
       final returnType = mirror.type.instanceMembers[symbol].returnType;
-      final value = _castModel(assignments[symbol], returnType);
+      final value = _castModels(assignments[symbol], returnType);
       mirror.setField(symbol, value);
     }
     return model;
   }
 
-  Object _castModel(Model model, TypeMirror type) {
+  Object _castModels(List<Model> models, TypeMirror type) {
     if (type.isAssignableTo(reflectType(Future)))
-      return new LazyFuture(() => model);
+      return new LazyFuture(() => models.first);
     if (type.isAssignableTo(reflectType(List)))
-      return [model];
+      return new List.from(models);
     if (type.isAssignableTo(reflectType(Stream)))
-      return new Stream.fromIterable([model]);
+      return new Stream.fromIterable(models);
     if (type.isAssignableTo(reflectType(RepositoryQuery)))
       return null;
-    return model;
+    return models.first;
   }
 
   Future<M> _attachRelationships(M model, Map<String, dynamic> fields) async {
@@ -199,6 +199,10 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
     return _getGetterSetters(_isRelationshipMetadata)
         .map((s) => (_type.instanceMembers[s].owner as ClassMirror)
         .declarations[s]);
+  }
+
+  String pivot(MapsFieldsToModel other) {
+    return '${table}_${other.table}';
   }
 }
 
