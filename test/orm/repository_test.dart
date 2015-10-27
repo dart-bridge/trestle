@@ -83,7 +83,7 @@ main() {
     });
   });
 
-  group('relationships', () {
+  group('conventional relationships', () {
     Repository childRepo;
 
     group('one to one', () {
@@ -194,6 +194,124 @@ main() {
         final List<ConventionalManyToManyParent> parents =
         await repo.all().toList();
         final List<ConventionalManyToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChildren(children)));
+        await Future.wait(children.map((c) => c.expectParents(parents)));
+      });
+    });
+  });
+
+  group('unconventional relationships', () {
+    Repository childRepo;
+
+    group('one to one', () {
+      setUp(() {
+        repo = modelRepo(UnconventionalOneToOneParent);
+        childRepo = modelRepo(UnconventionalOneToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id_x': 11, 'child_id_x': 22},
+        ]);
+        await seed('children', [
+          {'id_x': 22},
+        ]);
+
+        // Read
+        final UnconventionalOneToOneParent parent = await repo.find(11);
+        final UnconventionalOneToOneChild child = await childRepo.find(22);
+
+        // Assert
+        await parent.expectChild(child);
+        await child.expectParent(parent);
+      });
+    });
+
+    group('one to many', () {
+      setUp(() {
+        repo = modelRepo(UnconventionalOneToManyParent);
+        childRepo = modelRepo(UnconventionalOneToManyChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id_x': 33}
+        ]);
+        await seed('children', [
+          {'id_x': 44, 'parent_id_x': 33},
+          {'id_x': 55, 'parent_id_x': 33},
+        ]);
+
+        // Read
+        final UnconventionalOneToManyParent parent = await repo.find(33);
+        final List<UnconventionalOneToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await parent.expectChildren(children);
+        await Future.wait(children.map((c) => c.expectParent(parent)));
+      });
+    });
+
+    group('many to one', () {
+      setUp(() {
+        repo = modelRepo(UnconventionalManyToOneParent);
+        childRepo = modelRepo(UnconventionalManyToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id_x': 66, 'child_id_x': 88},
+          {'id_x': 77, 'child_id_x': 88},
+        ]);
+        await seed('children', [
+          {'id_x': 88}
+        ]);
+
+        // Read
+        final List<UnconventionalManyToOneParent> parents =
+        await repo.all().toList();
+        final UnconventionalManyToOneChild child = await childRepo.find(88);
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChild(child)));
+        await child.expectParents(parents);
+      });
+    });
+
+    group('many to many', () {
+      setUp(() {
+        repo = modelRepo(UnconventionalManyToManyParent);
+        childRepo = modelRepo(UnconventionalManyToManyChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id_x': 99},
+          {'id_x': 1010},
+        ]);
+        await seed('children', [
+          {'id_x': 1111},
+          {'id_x': 1212},
+        ]);
+        await seed('parents_children', [
+          {'parent_id_x': 99, 'child_id_x': 1111},
+          {'parent_id_x': 99, 'child_id_x': 1212},
+          {'parent_id_x': 1010, 'child_id_x': 1111},
+          {'parent_id_x': 1010, 'child_id_x': 1212},
+        ]);
+
+        // Read
+        final List<UnconventionalManyToManyParent> parents =
+        await repo.all().toList();
+        final List<UnconventionalManyToManyChild> children =
         await childRepo.all().toList();
 
         // Assert
