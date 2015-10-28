@@ -64,6 +64,20 @@ class DataStructure {
   TableExpectation get expectTable => expectedTable('data_structures');
 }
 
+class ValueObject {
+  final String property;
+  final String camelCase;
+
+  const ValueObject(this.property, this.camelCase);
+
+  ContentExpectation get expectContent => expectedContent({
+    'property': property,
+    'camel_case': camelCase,
+  });
+
+  TableExpectation get expectTable => expectedTable('value_objects');
+}
+
 class SimpleModel extends Model {
   @field String property;
   @field String camelCase;

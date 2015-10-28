@@ -11,6 +11,7 @@ import 'lazy_future.dart';
 export 'model.dart';
 
 part 'maps_fields_to_object/maps_fields_to_data_structure.dart';
+part 'maps_fields_to_object/maps_fields_to_value_object.dart';
 part 'maps_fields_to_object/maps_fields_to_model.dart';
 part 'maps_fields_to_object/maps_fields_to_object.dart';
 part 'relationships/one_to_one_relationship.dart';

@@ -16,6 +16,11 @@ class Repository<M> {
     final mirror = reflectType(type);
     if (mirror.isAssignableTo(reflectType(Model)))
       return new MapsFieldsToModel(gateway, mirror);
+    final MethodMirror constructor =
+        (mirror as ClassMirror).declarations[const Symbol('')] ??
+        (mirror as ClassMirror).declarations[mirror.simpleName];
+    if (constructor.parameters.isNotEmpty)
+      return new MapsFieldsToValueObject(mirror);
     return new MapsFieldsToDataStructure(mirror);
   }
 

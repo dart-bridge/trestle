@@ -21,6 +21,7 @@ main() {
       schema.string('camel_case').nullable(true);
     };
     await gateway.create('data_structures', modelSchema);
+    await gateway.create('value_objects', modelSchema);
     await gateway.create('simple_models', modelSchema);
     await gateway.create('parents', (schema) {
       schema.id();
@@ -69,6 +70,7 @@ main() {
 
   tearDown(() async {
     await gateway.drop('data_structures');
+    await gateway.drop('value_objects');
     await gateway.drop('simple_models');
     await gateway.drop('parents');
     await gateway.drop('children');
@@ -90,6 +92,11 @@ main() {
   Repository dataRepo(Type model) {
     return new Repository.of(
         new MapsFieldsToDataStructure(reflectType(model)), gateway);
+  }
+
+  Repository valueRepo(Type model) {
+    return new Repository.of(
+        new MapsFieldsToValueObject(reflectType(model)), gateway);
   }
 
   Repository unconventionalModelRepo(Type model) {
@@ -126,7 +133,20 @@ main() {
         ..camelCase = 'b';
       await repo.save(model);
       model.expectTable(repo.table);
-      model.expectContent(await gateway.table('data_structures').first());
+      model.expectContent(await gateway.table(repo.table).first());
+    });
+  });
+
+  group('with a value object', () {
+    setUp(() {
+      repo = valueRepo(ValueObject);
+    });
+
+    test('properties are mapped correctly', () async {
+      final model = new ValueObject('a', 'b');
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.expectContent(await gateway.table(repo.table).first());
     });
   });
 
