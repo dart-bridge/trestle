@@ -161,7 +161,8 @@ main() {
 
     test('add all', () async {
       await query((q) => q.addAll([{'x': 'y'}, {'x': 'z'}]));
-      expectQuery('INSERT INTO "test" ("x") VALUES (?), (?);', ['y', 'z']);
+      expectQuery('INSERT INTO "test" ("x") VALUES (?);', ['y']);
+      expectQuery('INSERT INTO "test" ("x") VALUES (?);', ['z']);
     });
   });
 
@@ -265,4 +266,6 @@ class MockSqlDriver extends SqlDriver with SqlStandards {
     variableSets.add(variables);
     return new Stream.fromIterable(willReturn);
   }
+
+  String insertedIdQuery(String table) => '';
 }

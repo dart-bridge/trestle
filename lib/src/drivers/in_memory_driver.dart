@@ -9,13 +9,18 @@ class InMemoryDriver implements Driver {
     return _tables[name] ??= [];
   }
 
-  Future add(Query query, Map<String, dynamic> row) async {
-    _table(query.table).add(_autoIncrementId(query.table, row));
+  Future<int> add(Query query, Map<String, dynamic> row) async {
+    final idRow = _autoIncrementId(query.table, row);
+    _table(query.table).add(idRow);
+    return idRow['id'];
   }
 
-  Future addAll(Query query, Iterable<Map<String, dynamic>> rows) async {
-    _table(query.table).addAll(rows.map((r)
-    => _autoIncrementId(query.table, r)));
+  Future<Iterable<int>> addAll(Query query, Iterable<Map<String, dynamic>> rows) async {
+    final idRows = rows
+        .map((r) => _autoIncrementId(query.table, r))
+        .toList();
+    _table(query.table).addAll(idRows);
+    return idRows.map((r) => r['id']);
   }
 
   Future<Iterable<int>> _list(Query query, String field) async {
@@ -198,8 +203,10 @@ class InMemoryDriver implements Driver {
 
   Map _autoIncrementId(String table, Map row) {
     if (!row.containsKey('id')) return row;
-    row['id'] ??= ++_incrementingIds[table];
-    return row;
+    final idRow = new Map.from(row);
+    _incrementingIds[table] ??= 0;
+    idRow['id'] ??= ++_incrementingIds[table];
+    return idRow;
   }
 }
 

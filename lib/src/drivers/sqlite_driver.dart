@@ -30,4 +30,6 @@ class SqliteDriver extends SqlDriver with SqlStandards {
 
   String toString() => 'SqliteDriver(sqlite:'
       '${_file == ':memory:' ? 'memory' : '/' + new File(_file).absolute.path})';
+
+  String insertedIdQuery(String table) => 'SELECT last_insert_rowid() AS "id";';
 }

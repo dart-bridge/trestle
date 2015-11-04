@@ -47,4 +47,6 @@ class PostgresqlDriver extends SqlDriver with SqlStandards {
   }
 
   String toString() => 'PostgresqlDriver($_uri)';
+
+  String insertedIdQuery(String table) => 'SELECT lastval() AS "id";';
 }
