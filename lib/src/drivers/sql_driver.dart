@@ -7,6 +7,8 @@ abstract class SqlDriver implements Driver {
 
   String wrapSystemIdentifier(String systemId);
 
+  String insertedIdQuery(String table);
+
   Future _aggregate(String aggregate,
       String fieldSelector,
       String alias,
@@ -60,22 +62,35 @@ abstract class SqlDriver implements Driver {
     return newRow;
   }
 
-  Future add(Query query, Map<String, dynamic> row) {
+  Future<int> add(Query query, Map<String, dynamic> row) async {
     final variables = [];
     final singleQuery = _addQuery(variables, query, row);
-    return execute(singleQuery, _serialize(variables)).toList();
+    await execute(singleQuery, _serialize(variables)).drain();
+    try {
+      return await execute(insertedIdQuery(query.table), [])
+          .first.then((r) => r['id']);
+    } on StateError {
+      return null;
+    }
   }
 
-  Future addAll(Query query, Iterable<Map<String, dynamic>> rows) {
-    final variables = [];
-    final multiQuery = rows.map((r) => _addQuery(variables, query, r)).join(' ')
-        .replaceAllMapped(
-        new RegExp(r'; INSERT .*? VALUES (\(.*?\))'),
-        (m) => ', ${m[1]}');
-    return execute(multiQuery, _serialize(variables)).toList();
+  Future<Iterable<int>> addAll(Query query, Iterable<Map<String, dynamic>> rows) async {
+//    final variables = [];
+//    final multiQuery = rows.map((r) => _addQuery(variables, query, r)).join(' ')
+//        .replaceAllMapped(
+//        new RegExp(r'; INSERT .*? VALUES (\(.*?\))'),
+//        (m) => ', ${m[1]}');
+//    await execute(multiQuery, _serialize(variables)).toList();
+
+//    return execute(insertedIdQuery(query.table), [])
+//        .toList().then((l) => l.map((r) => r['id']));
+    return () async* {
+      for (final row in rows)
+          yield await add(query, row);
+    }().toList();
   }
 
-  Future delete(Query query) {
+  Future delete(Query query) async {
     final List<String> queryParts = [];
     final List variables = [];
 
@@ -83,7 +98,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', _serialize(variables)).toList();
+    await execute('${queryParts.join(' ')};', _serialize(variables)).toList();
   }
 
   Stream<Map<String, dynamic>> get(Query query, Iterable<String> fields) {
@@ -137,7 +152,7 @@ abstract class SqlDriver implements Driver {
   }
 
   Future _inOrDecrement(Query query, String field, int amount,
-      String operator) {
+      String operator) async {
     final List<String> queryParts = [];
     final List variables = [];
 
@@ -149,7 +164,7 @@ abstract class SqlDriver implements Driver {
 
     queryParts.addAll(_parseQuery(query, variables));
 
-    return execute('${queryParts.join(' ')};', _serialize(variables)).toList();
+    await execute('${queryParts.join(' ')};', _serialize(variables)).toList();
   }
 
   List _serialize(List variables) {
@@ -169,6 +184,8 @@ abstract class SqlDriver implements Driver {
   }
 
   Object _deserialize(Object value) {
+    if (value is String && new RegExp(r'^(\d+|\d*\.\d+)$').hasMatch(value))
+      return num.parse(value);
     try {
       return DateTime.parse(value);
     } catch (e) {

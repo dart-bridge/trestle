@@ -91,11 +91,13 @@ main() {
     });
 
     test('integration', () async {
+      const foreign = 'address_id';
+      const id = 'id';
       await gateway.table('users')
           .where((user) => user.age > 20 && user.first_name == 'John')
           .sortBy('first_name')
           .limit(1)
-          .join('addresses', (user, address) => user.address_id == address.id)
+          .join('addresses', (user, address) => user[foreign] == address[id])
           .get(['address', 'first_name', 'last_name']).toList();
 
       expectQuery(
@@ -159,7 +161,8 @@ main() {
 
     test('add all', () async {
       await query((q) => q.addAll([{'x': 'y'}, {'x': 'z'}]));
-      expectQuery('INSERT INTO "test" ("x") VALUES (?), (?);', ['y', 'z']);
+      expectQuery('INSERT INTO "test" ("x") VALUES (?);', ['y']);
+      expectQuery('INSERT INTO "test" ("x") VALUES (?);', ['z']);
     });
   });
 
@@ -263,4 +266,6 @@ class MockSqlDriver extends SqlDriver with SqlStandards {
     variableSets.add(variables);
     return new Stream.fromIterable(willReturn);
   }
+
+  String insertedIdQuery(String table) => '';
 }

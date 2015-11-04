@@ -22,7 +22,7 @@ main() => session(driver, (Gateway gateway) async {
       .increment('age'); // Jane's age is now 37
 
   await gateway.table('users')
-      .sortBy('age', 'desc')
+      .sortBy('age', 'asc')
       .get(['age']).toList(); // [{age: 35}, {age: 37}]
 
   await gateway.table('users')

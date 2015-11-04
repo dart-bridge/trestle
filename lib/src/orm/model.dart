@@ -1,19 +1,13 @@
-part of trestle.model;
+library trestle.orm.model;
 
-class Field {
-  final String columnName;
-
-  const Field([String this.columnName = null]);
-}
-
-const field = const Field();
+part 'annotations.dart';
 
 abstract class Model {
   @field int id;
-  @Field('created_at') DateTime createdAt;
-  @Field('updated_at') DateTime updatedAt;
+  @field DateTime createdAt = new DateTime.now();
+  @field DateTime updatedAt = new DateTime.now();
 
-  Model() :
-        createdAt = new DateTime.now(),
-        updatedAt = new DateTime.now();
+  operator ==(Model other) =>
+      other.runtimeType == runtimeType &&
+          other.id == id;
 }
