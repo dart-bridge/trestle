@@ -57,6 +57,24 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
         .then((m) => _attachRelationships(m, fields));
   }
 
+  @override
+  Map<String, dynamic> serialize(M model,
+      [bool skipRelationships = false]) {
+    if (model == null) return null;
+    final serialized = super.serialize(model);
+    if (skipRelationships)
+      return serialized;
+    return _detachRelationships(model, serialized);
+  }
+
+
+  Map<String, dynamic> _detachRelationships(M model, Map row) {
+    final result = new Map.from(row);
+    for (final relationship in _relationships)
+      relationship.detach(row, model, ((k, v) => result[k] = v));
+    return result;
+  }
+
   _attachAssignments(M model, Map<Symbol, List> assignments) {
     final mirror = reflect(model);
     for (final symbol in assignments.keys) {
@@ -85,7 +103,7 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
       if (mirror
           .getField(relationship._name)
           .reflectee == null)
-        await relationship.resolve(model, fields, mirror.setField);
+        await relationship.attach(model, fields, mirror.setField);
     }
     return model;
   }

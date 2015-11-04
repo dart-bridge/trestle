@@ -109,18 +109,20 @@ main() {
     return gateway.table(table).addAll(rows);
   }
 
-//  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
-//    expect(await gateway.table(table).get().toList(), equals(rows));
-//  }
-//
-//  Future expectModelTable(String table, List<Map<String, dynamic>> rows) async {
-//    expect(await gateway.table(table)
-//        .get().map((m) {
-//      m.remove('created_at');
-//      m.remove('updated_at');
-//      return m;
-//    }).toList(), equals(rows));
-//  }
+  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
+    final rowsInTable = await gateway.table(table).get().toList();
+    expect(rowsInTable.length, rows.length,
+        reason: 'Expected $table to contain ${rows.length} rows, '
+            'but ${rowsInTable.length} was found.');
+
+    for (var i = 0; i < rows.length; i++) {
+      for (final key in rows[i].keys)
+        expect(rowsInTable[i].keys, contains(key),
+            reason: 'Table $table should contain the field $key');
+      for (final value in rows[i].values)
+        expect(rowsInTable[i].values, contains(value));
+    }
+  }
 
   group('with a data structure', () {
     setUp(() {
@@ -178,11 +180,12 @@ main() {
   });
 
   group('conventional relationships', () {
-    Repository childRepo;
+    Repository<Model> childRepo;
+    Repository<Model> parentRepo;
 
     group('one to one', () {
       setUp(() {
-        repo = modelRepo(ConventionalOneToOneParent);
+        parentRepo = modelRepo(ConventionalOneToOneParent);
         childRepo = modelRepo(ConventionalOneToOneChild);
       });
 
@@ -196,18 +199,42 @@ main() {
         ]);
 
         // Read
-        final ConventionalOneToOneParent parent = await repo.find(11);
+        final ConventionalOneToOneParent parent = await parentRepo.find(11);
         final ConventionalOneToOneChild child = await childRepo.find(22);
 
         // Assert
         await parent.expectChild(child);
         await child.expectParent(parent);
       });
+
+      test('write', () async {
+        // Create
+        final ConventionalOneToOneParent parent =
+        new ConventionalOneToOneParent();
+        final ConventionalOneToOneChild child =
+        new ConventionalOneToOneChild();
+
+        // Assign
+        parent.child = child;
+        child.parent = parent;
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1, 'conventional_one_to_one_child_id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+        ]);
+      });
     });
 
     group('one to many', () {
       setUp(() {
-        repo = modelRepo(ConventionalOneToManyParent);
+        parentRepo = modelRepo(ConventionalOneToManyParent);
         childRepo = modelRepo(ConventionalOneToManyChild);
       });
 
@@ -222,7 +249,7 @@ main() {
         ]);
 
         // Read
-        final ConventionalOneToManyParent parent = await repo.find(33);
+        final ConventionalOneToManyParent parent = await parentRepo.find(33);
         final List<ConventionalOneToManyChild> children =
         await childRepo.all().toList();
 
@@ -230,11 +257,35 @@ main() {
         await parent.expectChildren(children);
         await Future.wait(children.map((c) => c.expectParent(parent)));
       });
+
+      test('write', () async {
+        // Create
+        final ConventionalOneToManyParent parent =
+        new ConventionalOneToManyParent();
+        final ConventionalOneToManyChild child =
+        new ConventionalOneToManyChild();
+
+        // Assign
+        parent.children = [child];
+        child.parent = parent;
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1, 'conventional_one_to_many_parent_id': 1},
+        ]);
+      });
     });
 
     group('many to one', () {
       setUp(() {
-        repo = modelRepo(ConventionalManyToOneParent);
+        parentRepo = modelRepo(ConventionalManyToOneParent);
         childRepo = modelRepo(ConventionalManyToOneChild);
       });
 
@@ -250,20 +301,47 @@ main() {
 
         // Read
         final List<ConventionalManyToOneParent> parents =
-        await repo.all().toList();
+        await parentRepo.all().toList();
         final ConventionalManyToOneChild child = await childRepo.find(88);
 
         // Assert
         await Future.wait(parents.map((c) => c.expectChild(child)));
         await child.expectParents(parents);
       });
+
+      test('write', () async {
+        // Create
+        final ConventionalManyToOneParent parent =
+        new ConventionalManyToOneParent();
+        final ConventionalManyToOneChild child =
+        new ConventionalManyToOneChild();
+
+        // Assign
+        parent.child = child;
+        child.parents = [parent];
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1, 'conventional_many_to_one_child_id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+        ]);
+      });
     });
 
     group('many to many', () {
       setUp(() {
-        repo = modelRepo(ConventionalManyToManyParent);
+        parentRepo = modelRepo(ConventionalManyToManyParent);
         childRepo = modelRepo(ConventionalManyToManyChild);
       });
+
+      const parentId = 'conventional_many_to_many_parent_id';
+      const childId = 'conventional_many_to_many_child_id';
 
       test('read', () async {
         // Seed
@@ -275,8 +353,6 @@ main() {
           {'id': 1111},
           {'id': 1212},
         ]);
-        const parentId = 'conventional_many_to_many_parent_id';
-        const childId = 'conventional_many_to_many_child_id';
         await seed('parents_children', [
           {parentId: 99, childId: 1111},
           {parentId: 99, childId: 1212},
@@ -286,7 +362,7 @@ main() {
 
         // Read
         final List<ConventionalManyToManyParent> parents =
-        await repo.all().toList();
+        await parentRepo.all().toList();
         final List<ConventionalManyToManyChild> children =
         await childRepo.all().toList();
 
@@ -294,6 +370,42 @@ main() {
         await Future.wait(parents.map((c) => c.expectChildren(children)));
         await Future.wait(children.map((c) => c.expectParents(parents)));
       });
+
+      test('write', () async {
+        // Create
+        final ConventionalManyToManyParent parent =
+        new ConventionalManyToManyParent();
+        final ConventionalManyToManyChild child1 =
+        new ConventionalManyToManyChild();
+        final ConventionalManyToManyChild child2 =
+        new ConventionalManyToManyChild();
+//        final pivot = new ManyToManyRepository
+//          <ConventionalManyToManyParent, ConventionalManyToManyChild>(gateway);
+
+        // Assign
+        parent.children = [child1, child2];
+        child1.parents = [parent];
+        child2.parents = [parent];
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child1);
+        await childRepo.save(child2);
+//        await pivot.save();
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+          {'id': 2},
+        ]);
+        await expectTable('parents_children', [
+          {childId: 1, parentId: 1},
+          {childId: 2, parentId: 1},
+        ]);
+      }, skip: 'many to many writes not yet implemented');
     });
   });
 

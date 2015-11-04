@@ -47,18 +47,35 @@ abstract class _RelationshipDeclaration
   }
 
   RepositoryQuery<Parent> _parentQuery(Query query(Query query)) =>
-    _query(_parentMapper, query);
+      _query(_parentMapper, query);
 
   RepositoryQuery<Child> _childQuery(Query query(Query query)) =>
-    _query(_childMapper, query);
+      _query(_childMapper, query);
 
-  Future resolve(
-      Model model,
+  Future attach(Model model,
       Map fields,
       void set(Symbol name, Object value)) async {
     final future = _wrapInType(_assignForeign(_makeQuery(fields), model));
     final value = future is LazyFuture ? future : await future;
     set(_name, value);
+  }
+
+  void detach(Map self, Model model, void set(String name, Object value)) {
+    final foreign = _foreignOf(model, self);
+    if (foreign == null) return;
+    if (isParent) setOnParent(foreign, set);
+    else setOnChild(foreign, set);
+  }
+
+  Map _foreignOf(Model model, Map self) {
+    final mirror = reflect(model);
+    final type = mirror.type;
+    final mapper = new MapsFieldsToModel(_gateway,
+        type.instanceMembers[_name].returnType);
+    final relative = mirror
+        .getField(_name)
+        .reflectee;
+    return mapper.serialize(relative, true);
   }
 
   RepositoryQuery _assignForeign(RepositoryQuery query, Model value) {
@@ -130,4 +147,8 @@ abstract class _RelationshipDeclaration
   RepositoryQuery<Parent> parent(Map child);
 
   RepositoryQuery<Child> child(Map parent);
+
+  void setOnParent(Map child, void set(String field, Object value));
+
+  void setOnChild(Map parent, void set(String field, Object value));
 }

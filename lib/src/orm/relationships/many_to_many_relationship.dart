@@ -19,4 +19,11 @@ class _ManyToManyRelationship<Parent extends Model, Child extends Model>
         .where((pivot) => pivot[_myKeyOnPivot] == self[_myKeyOnMe]);
     return new RepositoryQuery(query, mapper);
   }
+
+  void setOnChild(Map parent, void set(String field, Object value)) {}
+
+  void setOnParent(Map child, void set(String field, Object value)) {}
+
+  @override
+  void detach(Map self, Model model, void set(String name, Object value)) {}
 }

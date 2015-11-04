@@ -28,10 +28,14 @@ class Repository<M> {
 
   RepositoryQuery<M> get _repoQuery => new RepositoryQuery<M>(_query, _mapper);
 
-  Future save(M model) {
+  Future save(M model) async {
     if (_mapper.isSaved(model))
       return _mapper.find(_query, model).update(_mapper.serialize(model));
-    return _query.add(_mapper.serialize(model));
+    final id = await _query.add(_mapper.serialize(model));
+    if (model is Model) {
+      (model as Model).id = id;
+    }
+    MapsFieldsToObjectBase._deserialized.add(model);
   }
 
   Future saveAll(Iterable<M> models) => Future.wait(models.map(save));

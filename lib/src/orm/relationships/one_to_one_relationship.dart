@@ -13,4 +13,10 @@ class _OneToOneRelationship<Parent extends Model, Child extends Model>
     return _childQuery((q) => q
         .where((child) => child[_theirKeyOnThem] == parent[_theirKeyOnMe]));
   }
+
+  void setOnParent(Map child, void set(String field, Object value)) {
+    set(_theirKeyOnMe, child[_theirKeyOnThem]);
+  }
+
+  void setOnChild(Map parent, void set(String field, Object value)) {}
 }
