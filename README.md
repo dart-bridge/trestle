@@ -244,7 +244,7 @@ class Parent extends Model {
   @field int age;
   
   // Relationships are very expressive. Here, all Child models
-  // whose table rows has a key "user_id" matching this model's
+  // whose table rows has a key "parent_id" matching this model's
   // "id" field, are eager loaded to this List.
   @hasMany List<Child> children;
   
@@ -256,16 +256,16 @@ class Parent extends Model {
 class Child extends Model {
   // Single relationships can be annotated as either `Child` (eager)
   // or `Future<Child>` (lazy).
-  @belongsTo Parent user;
-  @belongsTo Future<Parent> user;
+  @belongsTo Parent parent;
+  @belongsTo Future<Parent> parent;
 }
 
 // Instantiate the repository with a gateway as an argument and the model as a type argument.
-final users = new Repository<Parent>(gateway);
+final parents = new Repository<Parent>(gateway);
 
-// You're done! The repository works like `gateway.table('users')` would,
+// You're done! The repository works like `gateway.table('parents')` would,
 // but it returns `Parent` objects instead of maps.
-Parent parent = await users.find(1);
+Parent parent = await parents.find(1);
 
 // The relationships are mapped automatically.
 Child child = parent.children.first;
