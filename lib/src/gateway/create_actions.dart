@@ -1,9 +1,9 @@
 part of trestle.gateway;
 
 abstract class CreateActions {
-  Future add(Map<String, dynamic> row);
+  Future<int> add(Map<String, dynamic> row);
 
-  Future addAll(Iterable<Map<String, dynamic>> rows);
+  Future<Iterable<int>> addAll(Iterable<Map<String, dynamic>> rows);
 
   Future insert(Map<String, dynamic> row);
 

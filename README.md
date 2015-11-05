@@ -209,56 +209,79 @@ It works like this:
 
 ```dart
 // Create a data structure
-class User {
+class Parent {
   int id;
   String email;
-  String first_name;
-  String last_name;
+  String firstName;
+  String lastName;
   String password;
   int age;
 }
 
-// Or create a full model
-class User extends Model {
-  @field String email;
-  @Field('first_name') String firstName;
-  @Field('last_name') String lastName;
-  @field String password;
-  @field int age;
+// Or a value object
+class Parent {
+  // Override the table name with a constant "table" on
+  // any of these types of models
+  static const String table = 'my_own_table_name';
+
+  final int id;
+  final String email;
+  final String firstName;
+  final String lastName;
+  final String password;
+  final int age;
+  
+  const Parent(this.id, this.email, this.firstName, 
+             this.lastName, this.password, this.age);
 }
 
-// Instantiate the repository with the model as a type argument.
-final users = new Repository<User>();
+// Or create a full model
+class Parent extends Model {
+  @field String email;
+  @field String firstName;
+  @field String lastName;
+  @field String password;
+  @field int age;
+  
+  // Relationships are very expressive. Here, all Child models
+  // whose table rows has a key "parent_id" matching this model's
+  // "id" field, are eager loaded to this List.
+  @hasMany List<Child> children;
+  
+  // You can also lazy load the children by setting the property
+  // type to Stream<Child>, or (if you want to perform queries on
+  // the children) to RepositoryQuery<Child>.
+}
 
-// Connect the gateway (we do this in a separate step to prevent extended
-// repositories from having to pass a constructor argument along)
-users.connect(gateway);
+class Child extends Model {
+  // Single relationships can be annotated as either `Child` (eager)
+  // or `Future<Child>` (lazy).
+  @belongsTo Parent parent;
+  @belongsTo Future<Parent> parent;
+}
 
-// You're done! The repository works like `gateway.table('users')` would,
-// but it returns `User` objects instead of maps.
-User firstUser = await users.find(1);
+// Instantiate the repository with a gateway as an argument and the model as a type argument.
+final parents = new Repository<Parent>(gateway);
+
+// You're done! The repository works like `gateway.table('parents')` would,
+// but it returns `Parent` objects instead of maps.
+Parent parent = await parents.find(1);
+
+// The relationships are mapped automatically.
+Child child = parent.children.first;
+
+print(child.parent == parent); // true
+print(parent.child == child); // true
 ```
 
 
 ### Extending the repository
 
-The Trestle ORM has the mindset _convention over configuration_, so it infers a lot of things. For instance, the
-`Repository<User>` automatically works with a `users` table. `Repository<UpperCamelCase>` would look for
-`upper_camel_cases`.
-
-To override these options, we can extend the `Repository` like so:
-
-```dart
-class UsersRepository extends Repository<User> {
-  String get table => 'my_users_table';
-}
-```
-
 We can use this class to implement some query scopes or filters:
 
 ```dart
 class UsersRepository extends Repository<User> {
-  Query get ofDrinkingAge => where((user) => user.age > 20);
+  RepositoryQuery<User> get ofDrinkingAge => where((user) => user.age > 20);
 }
 
 // And use it like so:

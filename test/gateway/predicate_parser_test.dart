@@ -57,8 +57,10 @@ main() {
 
     test('integration', () {
       final age = 20;
-      assertParsesTo((user, address) => user.age > age && user.addressId == address.id,
-      'x.age > 20 && x.addressId == y.id');
+      final ageString = 'age';
+      final addressIdString = 'address_id';
+      assertParsesTo((user, address) => user[ageString] > age && user[addressIdString] == address.id,
+      'x.age > 20 && x.address_id == y.id');
     });
   });
 }

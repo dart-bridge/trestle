@@ -1,271 +1,541 @@
 import 'package:test/test.dart';
 import 'package:trestle/trestle.dart';
 import 'package:trestle/gateway.dart';
+import 'models.dart';
+import 'dart:mirrors';
 import 'dart:async';
 
 main() {
+  Gateway gateway;
   Repository repo;
-  MockInMemoryDriver driver;
 
-  Future table(String table, List<Map<String, dynamic>> fields) {
-    return driver.addAll(new Query(driver, table), fields);
-  }
-
-  expectThing(dynamic model, {int a, int b, int c}) {
-    expect(model.a, equals(a));
-    expect(model.b, equals(b));
-    expect(model.c, equals(c));
-  }
-
-  void testsForBothRepoStyles() {
-    test('contains models', () async {
-      await table(repo.table, [
-        {'a': 1, 'b': 2, 'c': 3},
-        {'a': 4, 'b': 5, 'c': 6},
-        {'a': 7, 'b': 8, 'c': 9},
-      ]);
-
-      final res = await repo.all().toList();
-
-      expectThing(res[0], a: 1, b: 2, c: 3);
-      expectThing(res[1], a: 4, b: 5, c: 6);
-      expectThing(res[2], a: 7, b: 8, c: 9);
+  setUp(() async {
+//    gateway = new Gateway(new SqliteDriver(':memory:'));
+    gateway = new Gateway(new InMemoryDriver());
+    await gateway.connect();
+    final modelSchema = (Schema schema) {
+      schema.id();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
+      schema.string('property').nullable(true);
+      schema.string('camel_case').nullable(true);
+    };
+    await gateway.create('data_structures', modelSchema);
+    await gateway.create('value_objects', modelSchema);
+    await gateway.create('simple_models', modelSchema);
+    await gateway.create('parents', (schema) {
+      schema.id();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
+      schema.int('conventional_one_to_one_child_id').nullable(true);
+      schema.int('conventional_many_to_one_child_id').nullable(true);
     });
-
-    test('extends the gateway query', () async {
-      await table(repo.table, [
-        {'a': 1, 'b': 2, 'c': 3},
-        {'a': 4, 'b': 5, 'c': 6},
-        {'a': 7, 'b': 8, 'c': 9},
-      ]);
-
-      final res = await repo
-          .where((m) => m.a == 4).get()
-          .toList();
-
-      expect(res.length, equals(1));
-
-      expectThing(res[0], a: 4, b: 5, c: 6);
+    await gateway.create('children', (schema) {
+      schema.id();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
+      schema.int('conventional_one_to_many_parent_id').nullable(true);
     });
-
-    test('can insert new models', () async {
-      await repo.add(new Thing()
-        ..a = 1
-        ..b = 2
-        ..c = 3);
-
-      expectThing(await repo.first(), a: 1, b: 2, c: 3);
+    await gateway.create('parents_x', (schema) {
+      schema.int('id_x').incrementingPrimaryKey();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
+      schema.int('child_id_x').nullable(true);
     });
-
-    test('models can have ids', () async {
-      final thing = new Thing()
-        ..id = 1
-        ..a = 4
-        ..b = 5
-        ..c = 6;
-      await repo.add(thing);
-
-      thing.a = 7;
-
-      await repo.update(thing);
-
-      final persistedThing = await repo.find(1);
-
-      expectThing(persistedThing, a: 7, b: 5, c: 6);
-      expect(await repo.count(), equals(1));
-      expect(persistedThing.id, equals(1));
+    await gateway.create('children_x', (schema) {
+      schema.int('id_x').incrementingPrimaryKey();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
+      schema.int('parent_id_x').nullable(true);
     });
-  }
-
-  group('not extended repo', () {
-    setUp(() {
-      repo = new Repository<Thing>();
-      repo.connect(new Gateway(driver = new MockInMemoryDriver()));
+    await gateway.create('parents_x_mtm', (schema) {
+      schema.int('id_x').incrementingPrimaryKey();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
     });
-
-    test('infers table name', () {
-      expect(repo.table, equals('things'));
+    await gateway.create('children_x_mtm', (schema) {
+      schema.int('id_x').incrementingPrimaryKey();
+      schema.timestamp('created_at').nullable(true);
+      schema.timestamp('updated_at').nullable(true);
     });
-
-    testsForBothRepoStyles();
+    await gateway.create('parents_children', (schema) {
+      schema.int('conventional_many_to_many_parent_id').nullable(true);
+      schema.int('conventional_many_to_many_child_id').nullable(true);
+    });
+    await gateway.create('parents_children_x', (schema) {
+      schema.int('parent_id_x').nullable(true);
+      schema.int('child_id_x').nullable(true);
+    });
   });
 
-  group('extended repo', () {
-    ThingRepository things;
-    BelongingRepository belongings;
+  tearDown(() async {
+    await gateway.drop('data_structures');
+    await gateway.drop('value_objects');
+    await gateway.drop('simple_models');
+    await gateway.drop('parents');
+    await gateway.drop('children');
+    await gateway.drop('parents_x');
+    await gateway.drop('children_x');
+    await gateway.drop('parents_x_mtm');
+    await gateway.drop('children_x_mtm');
+    await gateway.drop('parents_children');
+    await gateway.drop('parents_children_x');
+    await gateway.disconnect();
+  });
 
-    expectBelonging(Belonging model, {int d}) {
-      expect(model.d, equals(d));
+  Repository modelRepo(Type model) {
+    return new Repository.of(
+        new MapsFieldsToModel(gateway, reflectType(model)),
+        gateway);
+  }
+
+  Repository dataRepo(Type model) {
+    return new Repository.of(
+        new MapsFieldsToDataStructure(reflectType(model)), gateway);
+  }
+
+  Repository valueRepo(Type model) {
+    return new Repository.of(
+        new MapsFieldsToValueObject(reflectType(model)), gateway);
+  }
+
+  Repository unconventionalModelRepo(Type model) {
+    return new UnconventionalRepository.of(
+        new MapsFieldsToModel(gateway, reflectType(model)),
+        gateway);
+  }
+
+  Future seed(String table, List<Map<String, dynamic>> rows) {
+    return gateway.table(table).addAll(rows);
+  }
+
+  Future expectTable(String table, List<Map<String, dynamic>> rows) async {
+    final rowsInTable = await gateway.table(table).get().toList();
+    expect(rowsInTable.length, rows.length,
+        reason: 'Expected $table to contain ${rows.length} rows, '
+            'but ${rowsInTable.length} was found.');
+
+    for (var i = 0; i < rows.length; i++) {
+      for (final key in rows[i].keys)
+        expect(rowsInTable[i].keys, contains(key),
+            reason: 'Table $table should contain the field $key');
+      for (final value in rows[i].values)
+        expect(rowsInTable[i].values, contains(value));
     }
+  }
 
+  group('with a data structure', () {
     setUp(() {
-      final gateway = new Gateway(driver = new MockInMemoryDriver());
-      repo = things = new ThingRepository();
-      repo.connect(gateway);
-      belongings = new BelongingRepository();
-      belongings.connect(gateway);
+      repo = dataRepo(DataStructure);
     });
 
-    test('overrides table name', () {
-      expect(repo.table, equals('overriden'));
+    test('properties are mapped correctly', () async {
+      final model = new DataStructure()
+        ..property = 'a'
+        ..camelCase = 'b';
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.expectContent(await gateway.table(repo.table).first());
+    });
+  });
+
+  group('with a value object', () {
+    setUp(() {
+      repo = valueRepo(ValueObject);
     });
 
-    test('can delete rows', () async {
-      await table(repo.table, [
-        {'id': 1, 'a': 1, 'b': 2, 'c': 3},
-      ]);
+    test('properties are mapped correctly', () async {
+      final model = new ValueObject('a', 'b');
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.expectContent(await gateway.table(repo.table).first());
+    });
+  });
 
-      final thing = await repo.find(1);
-
-      await repo.delete(thing);
-
-      expect(await repo.all().toList(), isEmpty);
+  group('with a simple model', () {
+    setUp(() {
+      repo = modelRepo(SimpleModel);
     });
 
-    group('relationships', () {
-      test('one to many', () async {
-        await table(repo.table, [
-          {'id': 1, 'a': 1, 'b': 2, 'c': 3},
+    test('properties are mapped correctly', () async {
+      final model = new SimpleModel()
+        ..property = 'a'
+        ..camelCase = 'b';
+      await repo.save(model);
+      model.expectTable(repo.table);
+      model.id = 1;
+      model.expectContent(await gateway.table('simple_models').first());
+    });
+  });
+
+  group('with a model with overridden table name', () {
+    setUp(() {
+      repo = modelRepo(ModelWithOverriddenTableName);
+    });
+
+    test('table name is overriden', () async {
+      final model = new ModelWithOverriddenTableName();
+      model.expectTable(repo.table);
+    });
+  });
+
+  group('conventional relationships', () {
+    Repository<Model> childRepo;
+    Repository<Model> parentRepo;
+
+    group('one to one', () {
+      setUp(() {
+        parentRepo = modelRepo(ConventionalOneToOneParent);
+        childRepo = modelRepo(ConventionalOneToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 11, 'conventional_one_to_one_child_id': 22},
         ]);
-        await table('belongings', [
-          {'id': 1, 'd': 1, 'overriden_id': 1},
-          {'id': 2, 'd': 2, 'overriden_id': 1},
-          {'id': 3, 'd': 3, 'overriden_id': 2},
+        await seed('children', [
+          {'id': 22},
         ]);
 
-        final thing = await repo.find(1);
-        final belongingsOfThing = await things.belongingsOf(thing)
-            .get()
-            .toList();
-        final belonging = belongingsOfThing[0];
-        final thingCopy = await belongings.thingOf(belonging);
+        // Read
+        final ConventionalOneToOneParent parent = await parentRepo.find(11);
+        final ConventionalOneToOneChild child = await childRepo.find(22);
 
-        expect([
-          thingCopy.id,
-          thingCopy.a,
-          thingCopy.b,
-          thingCopy.c,
-        ], equals([
-          thing.id,
-          thing.a,
-          thing.b,
-          thing.c,
-        ]));
+        // Assert
+        await parent.expectChild(child);
+        await child.expectParent(parent);
+      });
 
-        expect(belongingsOfThing.length, equals(2));
-        expectBelonging(belonging, d: 1);
+      test('write', () async {
+        // Create
+        final ConventionalOneToOneParent parent =
+        new ConventionalOneToOneParent();
+        final ConventionalOneToOneChild child =
+        new ConventionalOneToOneChild();
+
+        // Assign
+        parent.child = child;
+        child.parent = parent;
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1, 'conventional_one_to_one_child_id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+        ]);
       });
     });
 
-    testsForBothRepoStyles();
+    group('one to many', () {
+      setUp(() {
+        parentRepo = modelRepo(ConventionalOneToManyParent);
+        childRepo = modelRepo(ConventionalOneToManyChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 33}
+        ]);
+        await seed('children', [
+          {'id': 44, 'conventional_one_to_many_parent_id': 33},
+          {'id': 55, 'conventional_one_to_many_parent_id': 33},
+        ]);
+
+        // Read
+        final ConventionalOneToManyParent parent = await parentRepo.find(33);
+        final List<ConventionalOneToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await parent.expectChildren(children);
+        await Future.wait(children.map((c) => c.expectParent(parent)));
+      });
+
+      test('write', () async {
+        // Create
+        final ConventionalOneToManyParent parent =
+        new ConventionalOneToManyParent();
+        final ConventionalOneToManyChild child =
+        new ConventionalOneToManyChild();
+
+        // Assign
+        parent.children = [child];
+        child.parent = parent;
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1, 'conventional_one_to_many_parent_id': 1},
+        ]);
+      });
+    });
+
+    group('many to one', () {
+      setUp(() {
+        parentRepo = modelRepo(ConventionalManyToOneParent);
+        childRepo = modelRepo(ConventionalManyToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 66, 'conventional_many_to_one_child_id': 88},
+          {'id': 77, 'conventional_many_to_one_child_id': 88},
+        ]);
+        await seed('children', [
+          {'id': 88}
+        ]);
+
+        // Read
+        final List<ConventionalManyToOneParent> parents =
+        await parentRepo.all().toList();
+        final ConventionalManyToOneChild child = await childRepo.find(88);
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChild(child)));
+        await child.expectParents(parents);
+      });
+
+      test('write', () async {
+        // Create
+        final ConventionalManyToOneParent parent =
+        new ConventionalManyToOneParent();
+        final ConventionalManyToOneChild child =
+        new ConventionalManyToOneChild();
+
+        // Assign
+        parent.child = child;
+        child.parents = [parent];
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child);
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1, 'conventional_many_to_one_child_id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+        ]);
+      });
+    });
+
+    group('many to many', () {
+      setUp(() {
+        parentRepo = modelRepo(ConventionalManyToManyParent);
+        childRepo = modelRepo(ConventionalManyToManyChild);
+      });
+
+      const parentId = 'conventional_many_to_many_parent_id';
+      const childId = 'conventional_many_to_many_child_id';
+
+      test('read', () async {
+        // Seed
+        await seed('parents', [
+          {'id': 99},
+          {'id': 1010},
+        ]);
+        await seed('children', [
+          {'id': 1111},
+          {'id': 1212},
+        ]);
+        await seed('parents_children', [
+          {parentId: 99, childId: 1111},
+          {parentId: 99, childId: 1212},
+          {parentId: 1010, childId: 1111},
+          {parentId: 1010, childId: 1212},
+        ]);
+
+        // Read
+        final List<ConventionalManyToManyParent> parents =
+        await parentRepo.all().toList();
+        final List<ConventionalManyToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChildren(children)));
+        await Future.wait(children.map((c) => c.expectParents(parents)));
+      });
+
+      test('write', () async {
+        // Create
+        final ConventionalManyToManyParent parent =
+        new ConventionalManyToManyParent();
+        final ConventionalManyToManyChild child1 =
+        new ConventionalManyToManyChild();
+        final ConventionalManyToManyChild child2 =
+        new ConventionalManyToManyChild();
+//        final pivot = new ManyToManyRepository
+//          <ConventionalManyToManyParent, ConventionalManyToManyChild>(gateway);
+
+        // Assign
+        parent.children = [child1, child2];
+        child1.parents = [parent];
+        child2.parents = [parent];
+
+        // Write
+        await parentRepo.save(parent);
+        await childRepo.save(child1);
+        await childRepo.save(child2);
+//        await pivot.save();
+
+        // Assert
+        await expectTable('parents', [
+          {'id': 1},
+        ]);
+        await expectTable('children', [
+          {'id': 1},
+          {'id': 2},
+        ]);
+        await expectTable('parents_children', [
+          {childId: 1, parentId: 1},
+          {childId: 2, parentId: 1},
+        ]);
+      }, skip: 'many to many writes not yet implemented');
+    });
   });
 
-  group('extending Model', () {
-    Gateway gateway;
+  group('unconventional relationships', () {
+    Repository<Model> childRepo;
+    Repository<Model> parentRepo;
 
-    setUp(() {
-      repo = new Repository<ThingModel>();
-      repo.connect(gateway = new Gateway(driver = new MockInMemoryDriver()));
+    group('one to one', () {
+      setUp(() {
+        parentRepo = unconventionalModelRepo(UnconventionalOneToOneParent);
+        childRepo = unconventionalModelRepo(UnconventionalOneToOneChild);
+      });
+
+      test('read', () async {
+        // Seed
+        await seed('parents_x', [
+          {'id_x': 11, 'child_id_x': 22},
+        ]);
+        await seed('children_x', [
+          {'id_x': 22},
+        ]);
+
+        // Read
+        final UnconventionalOneToOneParent parent = await parentRepo.find(11);
+        final UnconventionalOneToOneChild child = await childRepo.find(22);
+
+        // Assert
+        await parent.expectChild(child);
+        await child.expectParent(parent);
+      });
     });
 
-    test('persists as usual', () async {
-      await table('thing_models', [
-        {'id': 1, 'a': 1, 'b': 2, 'c': 3},
-        {'id': 2, 'a': 4, 'b': 5, 'c': 6},
-        {'id': 3, 'a': 7, 'b': 8, 'c': 9},
-      ]);
+    group('one to many', () {
+      setUp(() {
+        parentRepo = unconventionalModelRepo(UnconventionalOneToManyParent);
+        childRepo = unconventionalModelRepo(UnconventionalOneToManyChild);
+      });
 
-      ThingModel model1 = await repo.find(1);
-      ThingModel model2 = await repo.find(2);
-      ThingModel model3 = await repo.find(3);
+      test('read', () async {
+        // Seed
+        await seed('parents_x', [
+          {'id_x': 33}
+        ]);
+        await seed('children_x', [
+          {'id_x': 44, 'parent_id_x': 33},
+          {'id_x': 55, 'parent_id_x': 33},
+        ]);
 
-      expectThing(model1, a: 1, b: 2, c: 3);
-      expectThing(model2, a: 4, b: 5, c: 6);
-      expectThing(model3, a: 7, b: 8, c: 9);
+        // Read
+        final UnconventionalOneToManyParent parent = await parentRepo.find(33);
+        final List<UnconventionalOneToManyChild> children =
+        await childRepo.all().toList();
+
+        // Assert
+        await parent.expectChildren(children);
+        await Future.wait(children.map((c) => c.expectParent(parent)));
+      });
     });
 
-    test('only persists annotated fields', () async {
-      final model = new ThingModel()
-        ..id = 1
-        ..a = 1
-        ..b = 2
-        ..c = 3
-        ..willNotBePersisted = 'x';
+    group('many to one', () {
+      setUp(() {
+        parentRepo = unconventionalModelRepo(UnconventionalManyToOneParent);
+        childRepo = unconventionalModelRepo(UnconventionalManyToOneChild);
+      });
 
-      await repo.add(model);
+      test('read', () async {
+        // Seed
+        await seed('parents_x', [
+          {'id_x': 66, 'child_id_x': 88},
+          {'id_x': 77, 'child_id_x': 88},
+        ]);
+        await seed('children_x', [
+          {'id_x': 88}
+        ]);
 
-      final ThingModel retrieved = await repo.find(1);
+        // Read
+        final List<UnconventionalManyToOneParent> parents =
+        await parentRepo.all().toList();
+        final UnconventionalManyToOneChild child = await childRepo.find(88);
 
-      expect(retrieved.willNotBePersisted, isNot(equals('x')));
+//        print(parents[0].child);
+//        print(child.parents[0]);
+
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChild(child)));
+        await child.expectParents(parents);
+      });
     });
 
-    test('annotations override column name', () async {
-      await table('thing_models', [
-        {'id': 1, 'created_at': new DateTime(2015)}
-      ]);
+    group('many to many', () {
+      setUp(() {
+        parentRepo = unconventionalModelRepo(UnconventionalManyToManyParent);
+        childRepo = unconventionalModelRepo(UnconventionalManyToManyChild);
+      });
 
-      final ThingModel retrieved = await repo.find(1);
+      test('read', () async {
+        // Seed
+        await seed('parents_x_mtm', [
+          {'id_x': 99},
+          {'id_x': 1010},
+        ]);
+        await seed('children_x_mtm', [
+          {'id_x': 1111},
+          {'id_x': 1212},
+        ]);
+        await seed('parents_children_x', [
+          {'parent_id_x': 99, 'child_id_x': 1111},
+          {'parent_id_x': 99, 'child_id_x': 1212},
+          {'parent_id_x': 1010, 'child_id_x': 1111},
+          {'parent_id_x': 1010, 'child_id_x': 1212},
+        ]);
 
-      expect(retrieved.createdAt, equals(new DateTime(2015)));
+        // Read
+        final List<UnconventionalManyToManyParent> parents =
+        await parentRepo.all().toList();
+        final List<UnconventionalManyToManyChild> children =
+        await childRepo.all().toList();
 
-      retrieved.createdAt = new DateTime(2016);
-
-      await repo.update(retrieved);
-
-      expect(await gateway.table('thing_models').get(['created_at']).toList(),
-          equals([
-            {'created_at': new DateTime(2016)}
-          ]));
+        // Assert
+        await Future.wait(parents.map((c) => c.expectChildren(children)));
+        await Future.wait(children.map((c) => c.expectParents(parents)));
+      });
     });
   });
 }
 
-class Thing {
-  int id;
-  int a;
-  int b;
-  int c;
-}
-
-class Belonging {
-  int id;
-  int overriden_id;
-  int d;
-}
-
-class ThingModel extends Model {
-  @field int a;
-  @field int b;
-  @field int c;
-  String willNotBePersisted;
-}
-
-class BelongingModel extends Model {
-  @Field('overriden_id') int overridenId;
-  @field int d;
-}
-
-class ThingRepository extends Repository<Thing> {
-  String get table => 'overriden';
-
-  RepositoryQuery<Belonging> belongingsOf(Thing thing) {
-    return relationship(thing).hasMany(Belonging);
-  }
-}
-
-class BelongingRepository extends Repository<Belonging> {
-  Future<Thing> thingOf(Belonging belonging) {
-    return relationship(belonging).belongsTo(
-        Thing, field: 'overriden_id', table: 'overriden');
-  }
-}
-
-class MockInMemoryDriver extends InMemoryDriver {
-  final List<Query> queries = [];
+class UnconventionalRepository<M> extends Repository<M> {
+  UnconventionalRepository.of(MapsFieldsToObject<M> mapper, Gateway gateway)
+      : super.of(mapper, gateway);
 
   @override
-  Stream<Map<String, dynamic>> get(Query query, Iterable<String> fields) {
-    queries.add(query);
-    return super.get(query, fields);
-  }
+  Future<M> find(int id) => where((model) => model['id_x'] == id).first();
 }

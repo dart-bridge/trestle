@@ -50,6 +50,14 @@ class Gateway {
     return driver.alterTable(name, await _runBlueprint(blueprint));
   }
 
+  Future model(String name,  Future blueprint(Schema schema)) {
+    return create(name, (schema) {
+      schema.id();
+      schema.timestamps();
+      blueprint(schema);
+    });
+  }
+
   Future<Schema> _runBlueprint(Future blueprint(Schema schema)) async {
     final schema = new Schema();
     await blueprint(schema);

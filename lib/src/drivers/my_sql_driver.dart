@@ -46,7 +46,10 @@ class MySqlDriver extends SqlDriver {
     final sqljocky.Query preparedQuery = await _connection.prepare(query);
     final sqljocky.Results results = await preparedQuery.execute(variables);
     Iterable<String> fieldNames = results.fields.map((f) => f.name);
-    yield* results.map((row) => new Map.fromIterables(fieldNames, row)).map(deserialize);
+    preparedQuery.close();
+    yield* results
+        .map((row) => new Map.fromIterables(fieldNames, row))
+        .map(deserialize);
   }
 
   String wrapSystemIdentifier(String systemId) {
@@ -57,4 +60,6 @@ class MySqlDriver extends SqlDriver {
       'MySqlDriver(mysql://$_username${_password == null
           ? ''
           : ':$_password'}@$_host:$_port/$_database)';
+
+  String insertedIdQuery(String table) => 'SELECT LAST_INSERT_ID() + 1 AS `id`;';
 }

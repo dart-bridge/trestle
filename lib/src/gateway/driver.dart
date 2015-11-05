@@ -15,9 +15,9 @@ abstract class Driver {
 
   Future<int> sum(Query query, String field);
 
-  Future add(Query query, Map<String, dynamic> row);
+  Future<int> add(Query query, Map<String, dynamic> row);
 
-  Future addAll(Query query, Iterable<Map<String, dynamic>> rows);
+  Future<Iterable<int>> addAll(Query query, Iterable<Map<String, dynamic>> rows);
 
   Future delete(Query query);
 
