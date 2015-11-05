@@ -28,6 +28,15 @@ class Repository<M> {
 
   RepositoryQuery<M> get _repoQuery => new RepositoryQuery<M>(_query, _mapper);
 
+  @Deprecated('in version 1.0')
+  Future update(M model) => save(model);
+
+  @Deprecated('in version 1.0')
+  Future add(M model) => save(model);
+
+  @Deprecated('in version 1.0')
+  Future addAll(Iterable<M> models) => saveAll(models);
+
   Future save(M model) async {
     if (_mapper.isSaved(model))
       return _mapper.find(_query, model).update(_mapper.serialize(model));
