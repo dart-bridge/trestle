@@ -410,11 +410,12 @@ main() {
   });
 
   group('unconventional relationships', () {
-    Repository childRepo;
+    Repository<Model> childRepo;
+    Repository<Model> parentRepo;
 
     group('one to one', () {
       setUp(() {
-        repo = unconventionalModelRepo(UnconventionalOneToOneParent);
+        parentRepo = unconventionalModelRepo(UnconventionalOneToOneParent);
         childRepo = unconventionalModelRepo(UnconventionalOneToOneChild);
       });
 
@@ -428,7 +429,7 @@ main() {
         ]);
 
         // Read
-        final UnconventionalOneToOneParent parent = await repo.find(11);
+        final UnconventionalOneToOneParent parent = await parentRepo.find(11);
         final UnconventionalOneToOneChild child = await childRepo.find(22);
 
         // Assert
@@ -439,7 +440,7 @@ main() {
 
     group('one to many', () {
       setUp(() {
-        repo = unconventionalModelRepo(UnconventionalOneToManyParent);
+        parentRepo = unconventionalModelRepo(UnconventionalOneToManyParent);
         childRepo = unconventionalModelRepo(UnconventionalOneToManyChild);
       });
 
@@ -454,7 +455,7 @@ main() {
         ]);
 
         // Read
-        final UnconventionalOneToManyParent parent = await repo.find(33);
+        final UnconventionalOneToManyParent parent = await parentRepo.find(33);
         final List<UnconventionalOneToManyChild> children =
         await childRepo.all().toList();
 
@@ -466,7 +467,7 @@ main() {
 
     group('many to one', () {
       setUp(() {
-        repo = unconventionalModelRepo(UnconventionalManyToOneParent);
+        parentRepo = unconventionalModelRepo(UnconventionalManyToOneParent);
         childRepo = unconventionalModelRepo(UnconventionalManyToOneChild);
       });
 
@@ -482,7 +483,7 @@ main() {
 
         // Read
         final List<UnconventionalManyToOneParent> parents =
-        await repo.all().toList();
+        await parentRepo.all().toList();
         final UnconventionalManyToOneChild child = await childRepo.find(88);
 
 //        print(parents[0].child);
@@ -496,7 +497,7 @@ main() {
 
     group('many to many', () {
       setUp(() {
-        repo = unconventionalModelRepo(UnconventionalManyToManyParent);
+        parentRepo = unconventionalModelRepo(UnconventionalManyToManyParent);
         childRepo = unconventionalModelRepo(UnconventionalManyToManyChild);
       });
 
@@ -519,7 +520,7 @@ main() {
 
         // Read
         final List<UnconventionalManyToManyParent> parents =
-        await repo.all().toList();
+        await parentRepo.all().toList();
         final List<UnconventionalManyToManyChild> children =
         await childRepo.all().toList();
 
