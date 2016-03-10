@@ -230,8 +230,8 @@ class Parent {
   final String lastName;
   final String password;
   final int age;
-  
-  const Parent(this.id, this.email, this.firstName, 
+
+  const Parent(this.id, this.email, this.firstName,
              this.lastName, this.password, this.age);
 }
 
@@ -242,12 +242,12 @@ class Parent extends Model {
   @field String lastName;
   @field String password;
   @field int age;
-  
+
   // Relationships are very expressive. Here, all Child models
   // whose table rows has a key "parent_id" matching this model's
   // "id" field, are eager loaded to this List.
   @hasMany List<Child> children;
-  
+
   // You can also lazy load the children by setting the property
   // type to Stream<Child>, or (if you want to perform queries on
   // the children) to RepositoryQuery<Child>.
@@ -301,4 +301,3 @@ router.get('/users/count', (Repository<User> users) async {
   return 'There are ${await users.count()} users registered';
 });
 ```
-
