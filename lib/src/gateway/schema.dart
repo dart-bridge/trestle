@@ -72,6 +72,9 @@ class Schema {
   Column xml(String name, [core.int length]) =>
       _column(ColumnType.xml, name, length);
 
+  Column json(String name, [core.int length]) =>
+      _column(ColumnType.json, name, length);
+
   // Column aliases
 
   Column int(String name, [core.int length]) => integer(name, length);

@@ -174,6 +174,7 @@ abstract class SqlDriver implements Driver {
   Object _serializeValue(Object value) {
     if (value is String || value is num) return value;
     if (value is DateTime) return value.toIso8601String();
+    if (value is Map) return JSON.encode(value);
     return value.toString();
   }
 
@@ -275,6 +276,8 @@ abstract class SqlDriver implements Driver {
         return 'MULTISET$suffix';
       case ColumnType.xml:
         return 'XML$suffix';
+      case ColumnType.json:
+        return 'JSON$suffix';
     }
   }
 

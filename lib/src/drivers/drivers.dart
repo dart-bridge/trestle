@@ -9,6 +9,7 @@
 library trestle.drivers;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:mirrors';
 
 import 'package:trestle/src/gateway/constraints/constraints.dart';
