@@ -1,7 +1,7 @@
 name: trestle
 author: Emil Persson <emil.n.persson@gmail.com>
 homepage: https://github.com/dart-bridge/trestle
-version: 0.7.0
+version: 0.8.0
 environment:
   sdk: '>=1.12.0 <2.0.0'
 description: Database gateway and ORM
