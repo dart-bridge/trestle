@@ -21,6 +21,7 @@ enum ColumnType {
   array,
   multiset,
   xml,
+  json
 }
 
 class Column {
