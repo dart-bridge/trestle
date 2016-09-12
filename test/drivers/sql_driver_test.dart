@@ -221,12 +221,12 @@ main() {
         await gateway.create('t', (Schema schema) {
           schema.id();
           schema.integer('i').nullable(false);
-          schema.string('f');
+          schema.string('f').unique();
         });
         expectQuery('CREATE TABLE "t" ('
             '"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
             '"i" INTEGER NOT NULL, '
-            '"f" VARCHAR(255)'
+            '"f" VARCHAR(255) UNIQUE'
             ');');
       });
     });

@@ -289,6 +289,8 @@ abstract class SqlDriver implements Driver {
       constraints.add(autoIncrementKeyword);
     if (!column.isNullable)
       constraints.add('NOT NULL');
+    if (column.shouldBeUnique)
+      constraints.add('UNIQUE');
     return constraints.join(' ');
   }
 }
