@@ -22,7 +22,7 @@ class PredicateExpression {
 
 class PredicateParser {
   final ClosureMirror _mirror;
-  final Function _predicate;
+  // final Function _predicate;
   Iterable<String> _arguments;
   String _expression;
   final List _variables = [];
@@ -30,7 +30,7 @@ class PredicateParser {
 
   PredicateParser(Function predicate)
       :
-        _predicate = predicate,
+        // _predicate = predicate,
         _mirror = reflect(predicate);
 
   static PredicateExpression parse(Function predicate) {

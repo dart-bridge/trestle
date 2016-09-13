@@ -16,9 +16,11 @@ import 'package:trestle/src/gateway/constraints/constraints.dart';
 import 'package:trestle/src/gateway/gateway.dart';
 import 'package:sqljocky/sqljocky.dart' as sqljocky;
 import 'package:postgresql/postgresql.dart' as postgresql;
+import 'package:sqlite/sqlite.dart' as sqlite;
 
 part 'in_memory_driver.dart';
 part 'sql_driver.dart';
 part 'sql_standards.dart';
 part 'my_sql_driver.dart';
 part 'postgresql_driver.dart';
+part 'sqlite_driver.dart';
