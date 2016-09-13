@@ -1,3 +1,15 @@
+## 0.10.0
+
+**Additions**
+* Added back SQLite support via the newly updated `sqlite` package.
+
+```dart
+final gateway = new Gateway(
+  // driver: new SqliteDriver.inMemory()
+  driver: new SqliteDriver('path/to/database.db')
+)
+```
+
 ## 0.7.0
 
 **Breaking!**
