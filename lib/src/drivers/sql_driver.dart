@@ -278,6 +278,8 @@ abstract class SqlDriver implements Driver {
         return 'XML$suffix';
       case ColumnType.json:
         return 'JSON$suffix';
+      default:
+        return '';
     }
   }
 

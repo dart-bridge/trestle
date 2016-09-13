@@ -8,5 +8,6 @@ description: Database gateway and ORM
 dependencies:
   sqljocky: '^0.14.0'
   postgresql: '^0.3.0'
+  sqlite: '^0.4.0'
 dev_dependencies:
   test: any
