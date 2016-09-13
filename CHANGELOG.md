@@ -10,6 +10,11 @@ final gateway = new Gateway(
 )
 ```
 
+## 0.9.0
+
+**Bug fixes**
+* The `.unique()` constraint on a schema column now correctly outputs `UNIQUE` in `SQLDriver`.
+
 ## 0.7.0
 
 **Breaking!**
