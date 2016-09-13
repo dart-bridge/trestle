@@ -1,4 +1,4 @@
 language: dart
 dart:
   - stable
-script: pub run sqlite:install && pub run test test/
+script: pub run sqlite:install --package-root $TRAVIS_BUILD_DIR && pub run test test/
