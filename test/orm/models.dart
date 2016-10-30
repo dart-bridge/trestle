@@ -128,6 +128,9 @@ class ConventionalOneToManyParent extends Model {
 
   ModelsExpectation get expectChildren =>
       expectedModels(() => [children, lazyChildren, queryChildren]);
+
+  // To verify that issue #7 is fixed
+  void thing() {}
 }
 
 class ConventionalOneToManyChild extends Model {
@@ -310,4 +313,3 @@ class UnconventionalManyToManyChild extends Model {
   ModelsExpectation get expectParents =>
       expectedModels(() => [parents, lazyParents, queryParents]);
 }
-

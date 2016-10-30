@@ -1,3 +1,8 @@
+## 0.11.0
+
+**Bub fixes**
+* Fix bug #7 where models could not have void methods.
+
 ## 0.10.0
 
 **Additions**

@@ -185,11 +185,13 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
         ? mirror.type
         : mirror.type.typeArguments.first;
     return classMirror.instanceMembers.values
+        .where((i) => i.owner is ClassMirror)
+        .where((i) =>
+            (i.owner as ClassMirror).declarations.containsKey(i.simpleName))
+        .where((i) =>
+            (i.owner as ClassMirror).declarations[i.simpleName].metadata
+            .any(_isRelationshipMetadata))
         .where((i) => _isValidRelationshipAssign(i.returnType, _type))
-        .where((i) => i.owner is ClassMirror &&
-        (i.owner as ClassMirror).declarations.containsKey(i.simpleName) &&
-        (i.owner as ClassMirror).declarations[i.simpleName].metadata.any(
-            _isRelationshipMetadata))
         .map((i) => (i.owner as ClassMirror).declarations[i.simpleName]);
   }
 
@@ -223,4 +225,3 @@ class MapsFieldsToModel<M extends Model> extends MapsFieldsToObjectBase<M> {
     return '${table}_${other.table}';
   }
 }
-
