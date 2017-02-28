@@ -14,6 +14,19 @@ class PostgresqlDriver extends SqlDriver with SqlStandards {
       ? '?sslmode=require'
       : ''}';
 
+  factory PostgresqlDriver.fromUri(String uri) {
+    var connectionUri = Uri.parse(uri);
+    var userInfo = connectionUri.userInfo.split(':');
+
+    return new PostgresqlDriver(
+      host: connectionUri.host,
+      username: userInfo.first,
+      password: userInfo.last,
+      port: connectionUri.port,
+      database: connectionUri.pathSegments.first
+    );
+  }
+
   Future connect() async {
     _connection = await postgresql.connect(_uri);
   }
